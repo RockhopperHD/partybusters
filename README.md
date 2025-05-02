@@ -1,7 +1,7 @@
-# Partybusters
-Partybusters is a simple HTML game about managing a birthday party and language learning. It supports English, Spanish, Italian and French. It's infinitely expandable using AI tools, and it's meant for teachers and students looking to review with very minimal setup.
+# Partybusters!
+Partybusters! is a simple HTML game about managing a birthday party and language learning. It supports English, Spanish, Italian and French. It's infinitely expandable using AI tools, and it's meant for teachers and students looking to review with very minimal setup.
 ## The Game
-In ¡Guardafiesta! students play as a security guard managing a birthday party. They are given rules at the start of the level, and then are presented with various characters which they then admit or reject from the party based on whether or not they follow the rules.
+In Partybusters! students play as a security guard managing a birthday party. They are given rules at the start of the level, and then are presented with various characters which they then admit or reject from the party based on whether or not they follow the rules.
 
 Rules can be simple, like “don’t let anyone in if they like pizza” — or they can be complex, like “everyone needs a gift unless they’re a VIP.”
 
