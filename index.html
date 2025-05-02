@@ -83,22 +83,24 @@
     </div>
 
 <script>
-    /**
-     * Redirects the user to the specified language version of the site.
-     * Assumes the language versions are located at /partybusters/en, /partybusters/es, etc.
-     * relative to the website's root.
-     * @param {string} langCode - The two-letter language code (e.g., 'en', 'es').
-     */
     function selectLanguage(langCode) {
-        // Get the current path and remove trailing slash if present
-        const basePath = window.location.origin + window.location.pathname.replace(/\/$/, '');
-        // Build the new URL with the language code
-        const newUrl = basePath + '/' + langCode;
-        console.log('Redirecting to:', newUrl); // Log for debugging
-        // Perform the redirection
-        window.location.href = newUrl;
+        // Get current pathname (like /partybusters/ or /partybusters/index.html)
+        let path = window.location.pathname;
+
+        // Remove trailing 'index.html' if present
+        path = path.replace(/index\.html$/, '');
+
+        // Remove trailing slash if present (after removing index.html)
+        path = path.replace(/\/$/, '');
+
+        // Build the new URL
+        const newUrl = window.location.origin + path + '/' + langCode;
+
+        console.log('Redirecting to:', newUrl); // Debug log
+        window.location.href = newUrl; // Perform the redirect
     }
 </script>
+
 
 </body>
 </html>
