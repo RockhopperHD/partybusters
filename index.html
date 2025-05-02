@@ -84,22 +84,14 @@
 
 <script>
     function selectLanguage(langCode) {
-        // Get current pathname (like /partybusters/ or /partybusters/index.html)
-        let path = window.location.pathname;
-
-        // Remove trailing 'index.html' if present
-        path = path.replace(/index\.html$/, '');
-
-        // Remove trailing slash if present (after removing index.html)
-        path = path.replace(/\/$/, '');
-
-        // Build the new URL
-        const newUrl = window.location.origin + path + '/' + langCode;
-
-        console.log('Redirecting to:', newUrl); // Debug log
-        window.location.href = newUrl; // Perform the redirect
+        const repoName = 'partybusters';
+        const basePath = window.location.origin + '/' + repoName;
+        const newUrl = basePath + '/' + langCode;
+        console.log('Redirecting to:', newUrl);
+        window.location.href = newUrl;
     }
 </script>
+
 
 
 </body>
