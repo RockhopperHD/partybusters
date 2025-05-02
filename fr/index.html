@@ -1,0 +1,2816 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code de la Boum!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /*TOP CSS_General*/
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap'); /* Consider moving to <link> */
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #070707;
+            color: #ecf0f1;
+            margin: 0;
+            padding: 20px;
+            /* overflow: hidden; */ /* Might cause issues if content exceeds viewport */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Align top */
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .game-container {
+            width: 1000px; /* Consider using max-width and % for responsiveness */
+            height: 900px; /* Consider using aspect-ratio or relative units */
+            border: 3px solid #7f8c8d;
+            background-color: #1A1A1A;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            transform: scale(0.85); /* Scaling can affect layout, consider adjusting size */
+            transform-origin: top center;
+            margin-top: 20px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .screen.active {
+            display: flex; /* Show active screen */
+        }
+
+        .character {
+            width: 180px;
+            height: 360px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            position: absolute;
+            bottom: 80px;
+            transition: transform 0.5s ease, left 1s ease-in-out, opacity 0.5s ease;
+            image-rendering: pixelated; /* For pixel art style */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.4));
+            background-color: rgba(255, 255, 255, 0.05); /* Slight background for visibility */
+        }
+
+        .flipped {
+            transform: scaleX(-1); /* Flip character horizontally */
+            filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.4)); /* Adjust shadow for flip */
+        }
+
+        .dialogue-container {
+            position: absolute;
+            bottom: 400px; /* Position dialogue above clipboard */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .dialogue-box {
+            background: linear-gradient(to bottom, #ecf0f1, #bdc3c7); /* Light grey gradient */
+            color: #2c3e50; /* Dark text */
+            border: 3px solid #7f8c8d; /* Grey border */
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            font-size: 0.95em;
+            line-height: 1.6;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            min-height: 60px; /* Ensure space for text */
+            width: 100%;
+            position: relative; /* For the speech bubble arrow */
+        }
+
+        /* Speech bubble arrow */
+        .dialogue-box::before {
+            content: '';
+            position: absolute;
+            bottom: -24px; /* Position below the box */
+            left: 25%; /* Position arrow towards the left */
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-width: 13px;
+            border-style: solid;
+            border-color: #bdc3c7 transparent transparent transparent; /* Arrow color matches bottom gradient */
+            z-index: 1;
+        }
+
+        #feedback-box {
+            background-color: rgba(44, 62, 80, 0.85); /* Dark semi-transparent */
+            color: #ecf0f1;
+            border: 1px solid #7f8c8d;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-align: center;
+            width: fit-content; /* Size to content */
+            max-width: 90%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            min-height: 1.5em;
+            opacity: 0; /* Hidden initially */
+            transition: opacity 0.3s ease;
+            margin-top: 10px;
+        }
+
+        #feedback-box.visible {
+            opacity: 1; /* Show feedback */
+        }
+
+        button {
+            font-family: 'Roboto', sans-serif;
+            padding: 15px 30px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            margin: 15px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        button:hover:not(:disabled){
+            transform: translateY(-2px); /* Slight lift on hover */
+            box-shadow: 0 5px 7px rgba(0,0,0,0.4);
+        }
+
+        button:active:not(:disabled){
+            transform: translateY(1px); /* Slight press effect */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background-color: #7f8c8d !important; /* Grey out disabled */
+            color: #bdc3c7;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        /* Standard blue buttons */
+        #start-shift-button, #next-level-button, #restart-button-gameover, #start-game-button, #how-to-play-button, #import-data-button, #review-challenge-submit-button, #continue-next-level-button, #resume-button /* Moved to overlay */ {
+            background-color: #2980b9; /* Blue */
+        }
+        #start-shift-button:hover:not(:disabled), #next-level-button:hover:not(:disabled), #restart-button-gameover:hover:not(:disabled), #start-game-button:hover:not(:disabled), #how-to-play-button:hover:not(:disabled), #import-data-button:hover:not(:disabled), #review-challenge-submit-button:hover:not(:disabled), #continue-next-level-button:hover:not(:disabled), #resume-button:hover:not(:disabled) /* Moved to overlay */ {
+            background-color: #3498db; /* Lighter blue on hover */
+        }
+
+        /* Pause button style */
+        #pause-button {
+            background-color: #f39c12; /* Orange */
+            padding: 5px 12px; /* Smaller padding */
+            font-size: 0.9em;
+            min-width: 80px;
+            margin: 0 10px;
+        }
+        #pause-button:hover:not(:disabled) {
+            background-color: #f1c40f; /* Lighter orange */
+        }
+
+        /* Resume button style (now in overlay) */
+        #pause-overlay #resume-button {
+            padding: 15px 30px; /* Standard padding */
+            font-size: 1em;
+            margin-top: 20px;
+        }
+
+        .ui-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: fit-content; /* Adjust to content */
+            background-color: rgba(44, 62, 80, 0.85); /* Dark semi-transparent */
+            color: #ecf0f1;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-size: 1em;
+            border: 1px solid #7f8c8d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 60; /* Above characters, below overlays */
+            display: flex;
+            align-items: center;
+        }
+
+        .ui-bar span {
+            margin: 0 12px;
+            display: inline-block;
+            white-space: nowrap; /* Prevent wrapping */
+        }
+
+        .hearts {
+            color: #e74c3c; /* Red hearts */
+            letter-spacing: 4px;
+            font-size: 1.2em;
+            vertical-align: middle;
+        }
+
+        #timer-bar-container {
+            position: absolute;
+            top: 75px; /* Below UI bar */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px; /* Fixed width timer */
+            height: 15px;
+            background-color: #555; /* Dark background */
+            border: 1px solid #7f8c8d;
+            border-radius: 4px;
+            overflow: hidden;
+            z-index: 60;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); /* Inner shadow */
+        }
+
+        #timer-bar-fill {
+            height: 100%;
+            width: 100%; /* Starts full */
+            background-color: #f1c40f; /* Yellow */
+            border-radius: 3px;
+            transition: width 0.1s linear, background-color 0.3s ease; /* Smooth transitions */
+        }
+
+        .rules-reminder { display: none; } /* Not used */
+
+        #clipboard {
+            position: absolute;
+            bottom: -100%; /* Hidden below screen initially */
+            left: 10%;
+            width: 80%;
+            height: 65%;
+            background: linear-gradient(to bottom, #e4d9a9, #d4c58b); /* Parchment gradient */
+            color: #3d301b; /* Dark brown text */
+            border-top: 10px solid #8b4513; /* Wooden top */
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.4);
+            z-index: 50; /* Above gameplay, below UI bar/overlays */
+            transition: bottom 0.3s ease-in-out; /* Slide up animation */
+            padding: 20px 30px 20px 30px;
+            box-sizing: border-box;
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+         #clipboard.active {
+             bottom: 0; /* Slide into view */
+         }
+
+         #clipboard h3 {
+             margin: 0 0 15px 0;
+             text-align: center;
+             font-size: 1.5em;
+             color: #5a3d1a; /* Darker brown heading */
+             border-bottom: 1px solid #a08d65; /* Light brown separator */
+             padding-bottom: 5px;
+             flex-shrink: 0; /* Prevent shrinking */
+         }
+
+        #clipboard-rules {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+            font-size: 1.0em;
+            line-height: 1.7;
+            flex-grow: 1; /* Allow list to take available space */
+            overflow-y: auto; /* Enable scrolling if needed */
+            padding-right: 10px; /* Space for scrollbar */
+        }
+
+        #clipboard-rules li {
+            padding: 4px 0;
+            border-bottom: 1px dotted #a08d65;
+            margin: 1px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #clipboard-rules li:last-child {
+            border-bottom: none;
+        }
+
+        .rule-text {
+            flex-grow: 1; /* Allow text to take space */
+            margin-right: 10px;
+        }
+
+        .rule-assessment-buttons {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0; /* Prevent buttons shrinking */
+        }
+
+        .assess-btn {
+            padding: 3px 6px;
+            font-size: 1em;
+            border: 1px solid #a08d65;
+            background-color: #eee; /* Light grey */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .assess-btn:hover:not(.selected):not(:disabled) {
+            background-color: #ddd; /* Darker grey on hover */
+        }
+
+        .assess-btn.selected {
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.3); /* Inner shadow when selected */
+            border-width: 2px;
+        }
+
+        .assess-btn.followed.selected {
+            background-color: #2ecc71; /* Green for followed */
+            border-color: #27ae60;
+            color: white;
+        }
+
+        .assess-btn.broken.selected {
+            background-color: #e74c3c; /* Red for broken */
+            border-color: #c0392b;
+            color: white;
+        }
+
+        .assess-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Feedback styling on assessment buttons */
+        .feedback-correct .assess-btn.selected {
+             /* No change needed for correct */
+        }
+        .feedback-incorrect .assess-btn.selected {
+            opacity: 0.5; /* Dim incorrectly selected button */
+            text-decoration: line-through; /* Strike through */
+        }
+        /* Style to show the *actual* correct assessment */
+        .feedback-show-actual.followed {
+            background-color: rgba(46, 204, 113, 0.7) !important; /* Highlight correct green */
+            border-color: #27ae60 !important;
+            color: white !important;
+        }
+        .feedback-show-actual.broken {
+            background-color: rgba(231, 76, 60, 0.7) !important; /* Highlight correct red */
+            border-color: #c0392b !important;
+            color: white !important;
+        }
+
+        .clipboard-decision-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #a08d65;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .clipboard-decision-buttons button {
+            margin: 0;
+            padding: 12px 25px;
+        }
+
+        /* Swapped Button Styles for Reject/Admit */
+        .clipboard-decision-buttons button.reject {
+            background-color: #c0392b; /* Red */
+            order: 1; /* Reject first visually */
+        }
+        .clipboard-decision-buttons button.reject:hover:not(:disabled) {
+            background-color: #e74c3c; /* Lighter red */
+        }
+        .clipboard-decision-buttons button.admit {
+            background-color: #27ae60; /* Green */
+            order: 2; /* Admit second visually */
+        }
+        .clipboard-decision-buttons button.admit:hover:not(:disabled) {
+            background-color: #2ecc71; /* Lighter green */
+        }
+
+        #clipboard-trigger {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background-color: rgba(100, 116, 139, 0.6); /* Grey-blue trigger */
+            border: 1px solid rgba(156, 163, 175, 0.6);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            z-index: 51; /* Above clipboard */
+            transition: background-color 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #clipboard-trigger span {
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none; /* Text doesn't block hover */
+        }
+
+        #clipboard-trigger:hover {
+            background-color: rgba(156, 163, 175, 0.8); /* Lighter on hover */
+        }
+
+        #how-to-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            max-width: 600px;
+            max-height: 80%;
+            background-color: rgba(44, 62, 80, 0.95); /* Dark overlay */
+            border: 2px solid #7f8c8d;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 100; /* Highest */
+            display: none; /* Hidden by default */
+            overflow-y: auto; /* Scroll if content overflows */
+            color: #ecf0f1;
+        }
+
+        #how-to-play.active {
+            display: block; /* Show overlay */
+        }
+
+        #how-to-play h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #f1c40f; /* Yellow title */
+        }
+
+        #how-to-play p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+            font-size: 1.1em;
+            text-align: left;
+        }
+
+        #close-how-to-play {
+            display: block;
+            margin: 25px auto 0 auto;
+            background-color: #c0392b; /* Red close button */
+            padding: 10px 25px;
+        }
+
+        #close-how-to-play:hover {
+            background-color: #e74c3c; /* Lighter red */
+        }
+
+        #import-section {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: rgba(0,0,0,0.2); /* Darker section */
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        #import-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #import-textarea {
+            width: 95%;
+            height: 80px;
+            margin-bottom: 10px;
+            background-color: #dfe6e9; /* Light grey textarea */
+            color: #2d3436; /* Dark text */
+            border: 1px solid #b2bec3;
+            border-radius: 4px;
+            font-family: monospace; /* Monospace for code */
+            font-size: 0.9em;
+        }
+
+        #import-feedback {
+            margin-top: 10px;
+            font-style: italic;
+            min-height: 1.2em;
+            font-weight: bold;
+        }
+
+        #import-feedback.success { color: #2ecc71; } /* Green for success */
+        #import-feedback.error { color: #e74c3c; } /* Red for error */
+
+        .feedback-message {
+            font-weight: bold;
+            margin-top: 0px;
+            display: block;
+            font-size: 1em;
+            padding: 5px 0;
+        }
+
+        .feedback-correct { color: #27ae60; } /* Green */
+        .feedback-incorrect { color: #e74c3c; } /* Red */
+
+        /* Styles for End-of-Shift Challenge (now on Review Screen) */
+        #review-challenge-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.3); /* Darker background */
+            border-radius: 8px;
+            width: 70%;
+            max-width: 500px;
+            text-align: center;
+            display: none; /* Hidden by default */
+        }
+
+        #review-challenge-prompt {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #f1c40f; /* Yellow prompt */
+        }
+
+        #review-challenge-input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #7f8c8d;
+            border-radius: 4px;
+            background-color: #ecf0f1; /* Light input */
+            color: #2c3e50; /* Dark text */
+            font-size: 1em;
+        }
+        /* Style input border based on correctness */
+        #review-challenge-input.correct { border-color: #2ecc71; }
+        #review-challenge-input.incorrect { border-color: #e74c3c; }
+
+
+        #review-challenge-feedback {
+            min-height: 1.2em;
+            margin-top: 10px;
+            font-style: italic;
+            font-weight: bold; /* Make feedback bold */
+        }
+        /* Style feedback text color */
+        #review-challenge-feedback.feedback-correct { color: #2ecc71; }
+        #review-challenge-feedback.feedback-incorrect { color: #e74c3c; }
+
+
+        /* Title Screen Checkbox Options Reinstated */
+        .title-options-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+        .title-options {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .title-options label {
+            font-weight: normal;
+            font-size: 0.95em;
+        }
+        .title-options input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #f1c40f; /* Yellow checkbox */
+        }
+
+        /* Pause Overlay Styles */
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 90; /* Below How-to-Play, above most other things */
+            color: white;
+        }
+        #pause-overlay h2 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /*BOTTOM CSS_General*/
+
+        /*TOP CSS_BriefingScreen*/
+        #briefing-screen {
+            justify-content: flex-start; /* Align content to top */
+            padding-top: 40px;
+        }
+        #briefing-rules-box {
+            width: 60%;
+            max-width: 550px;
+            background: linear-gradient(to bottom, #ecf0f1, #d5dbdb); /* Light grey gradient */
+            color: #2c3e50; /* Dark text */
+            border: 3px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 10px 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+        #briefing-rules-box h3 {
+            margin: 5px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #b0bec5;
+            font-size: 1.1em;
+        }
+        #briefing-rules {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 1em;
+            line-height: 1.8;
+        }
+        #briefing-rules li {
+            padding: 6px 10px;
+            border-bottom: 1px dashed #b0bec5;
+            text-align: left;
+        }
+        #briefing-rules li:last-child { border-bottom: none; }
+        #briefing-rules li:nth-child(even) { background-color: rgba(127, 140, 141, 0.1); } /* Subtle striping */
+        #briefing-rules li.blank-rule { height: 1.8em; background-color: transparent !important; border-bottom: 1px dashed #b0bec5; } /* Placeholder */
+
+        #rep-dialogue {
+            width: 60%;
+            max-width: 500px;
+            top: 250px; /* Position below rules */
+            left: 50%;
+            transform: translateX(-50%);
+            position: absolute;
+            padding: 15px 25px;
+        }
+        /* Remove speech bubble arrow for this specific box */
+        #rep-dialogue::before, #rep-dialogue::after { content: none; display: none; }
+
+        /* Character positions for briefing */
+        #representative {
+            background-image: url('images/representative.png'); /* Placeholder - Ensure path is correct */
+            left: 100px;
+            bottom: 150px;
+        }
+        #security-briefing {
+            background-image: url('images/security.png'); /* Placeholder - Ensure path is correct */
+            right: 100px;
+            bottom: 150px;
+        }
+        #start-shift-button {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        /*BOTTOM CSS_BriefingScreen*/
+
+        /*TOP CSS_GameplayScreen*/
+        #gameplay-screen {
+            justify-content: flex-start; /* Align content to top */
+        }
+        #security-gameplay {
+            background-image: url('images/security.png'); /* Placeholder - Ensure path is correct */
+            right: 150px; /* Position security guard */
+        }
+        #partygoer {
+            /* Base styles, image set by JS */
+            left: -250px; /* Start off-screen */
+            transform: scaleX(1); /* Normal direction */
+            animation-duration: 1.2s;
+            animation-timing-function: ease-in-out;
+            animation-fill-mode: forwards; /* Keep end state */
+        }
+
+         #ask-buttons-container { /* Not currently used, kept for potential future */
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+            max-height: 250px;
+            overflow-y: auto;
+         }
+         .ask-button { /* Not currently used */
+            padding: 8px 15px;
+            font-size: 0.8em;
+            background-color: #636e72;
+            border: none;
+            border-bottom: 2px solid #2d3436;
+            text-transform: none;
+            letter-spacing: 0.5px;
+         }
+         .ask-button:hover:not(:disabled) {
+            background-color: #b2bec3;
+            color: #2d3436;
+            text-shadow: none;
+         }
+
+         /* Animations for partygoer movement */
+         @keyframes partygoerEnter {
+            from { left: -250px; opacity: 0; }
+            to { left: 150px; opacity: 1; } /* Enters from left */
+         }
+         @keyframes partygoerAccept {
+            0% { left: 150px; transform: scaleX(1) translateY(0); opacity: 1; }
+            20% { transform: scaleX(1) translateY(-20px); } /* Slight bounce */
+            60% { left: 650px; transform: scaleX(1) translateY(0); opacity: 1; } /* Moves right */
+            80% { transform: scaleX(1) translateY(-20px); } /* Slight bounce */
+            100% { left: 1100px; transform: scaleX(1) translateY(0); opacity: 0; } /* Exits right */
+         }
+         @keyframes partygoerReject {
+            0% { left: 150px; transform: scaleX(1); opacity: 1; }
+            25% { transform: scaleX(-1); } /* Flips */
+            100% { left: -250px; transform: scaleX(-1); opacity: 0; } /* Exits left (flipped) */
+         }
+         .animate-enter { animation-name: partygoerEnter; }
+         .animate-accept { animation-name: partygoerAccept; }
+         .animate-reject { animation-name: partygoerReject; }
+         /*BOTTOM CSS_GameplayScreen*/
+
+        /*TOP CSS_OverlayScreens*/
+        #gameover-screen, #levelcomplete-screen, #review-screen {
+            background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
+            color: white;
+            text-align: center;
+            justify-content: center; /* Center content vertically */
+            z-index: 50; /* Above gameplay */
+        }
+        #gameover-screen h2, #levelcomplete-screen h2, #review-screen h2 {
+            font-size: 2.5em;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #gameover-screen p, #levelcomplete-screen p {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        /* Specific p styling for review screen */
+        #review-screen #review-initial-message {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        /* Title colors */
+        #gameover-screen h2 { color: #e74c3c; } /* Red */
+        #levelcomplete-screen h2 { color: #2ecc71; } /* Green */
+        #review-screen h2 { color: #f1c40f; } /* Yellow */
+
+        /* Dialogue box styling on review screen */
+        #review-screen #review-dialogue {
+            position: relative; /* Reset positioning */
+            transform: none;
+            left: auto;
+            bottom: auto;
+            width: 60%;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        #review-screen #review-dialogue::before { display: none; } /* No speech bubble arrow */
+
+        /* Representative character on review screen */
+        #review-screen #representative-review {
+             position: relative; /* Reset positioning */
+             left: auto;
+             bottom: auto;
+             margin: 0 auto 20px auto; /* Center horizontally */
+             transform: none;
+             /* Reapply base character styles */
+             width: 180px;
+             height: 360px;
+             background-size: contain;
+             background-repeat: no-repeat;
+             background-position: center bottom;
+             image-rendering: pixelated;
+             image-rendering: -moz-crisp-edges;
+             image-rendering: crisp-edges;
+             filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.4));
+             background-color: rgba(255, 255, 255, 0.05);
+             background-image: url('images/representative.png'); /* Placeholder - Ensure path is correct */
+        }
+
+        #review-screen #continue-next-level-button {
+            margin-top: 30px;
+            display: none; /* Hide initially, shown after challenge */
+        }
+        /*BOTTOM CSS_OverlayScreens*/
+
+        /*TOP CSS_TitleScreen*/
+        #title-screen {
+            justify-content: center; /* Center content */
+            text-align: center;
+        }
+        #title-screen h1 {
+            font-family: 'Onest', sans-serif; /* Custom title font */
+            font-weight: 800; /* ExtraBold */
+            font-size: 3.5em;
+            color: #f1c40f; /* Yellow title */
+            text-shadow: 3px 3px 5px rgba(0,0,0,0.7);
+            margin-bottom: 20px;
+        }
+        #title-screen p {
+            font-size: 1.2em;
+            color: #bdc3c7; /* Light grey text */
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+        #title-screen .title-buttons {
+            margin-bottom: 20px; /* Space below start/how-to buttons */
+        }
+        /*BOTTOM CSS_TitleScreen*/
+
+        /*TOP CSS_Debug*/
+        #debug-info { display: none; /* Hide debug info by default */ }
+        /*BOTTOM CSS_Debug*/
+    </style>
+    </head>
+<body>
+    <p style="text-align: center; margin-bottom: 10px; font-family: sans-serif; color: #ccc; font-size: 0.9em;">
+        Si le jeu semble trop grand, essayez de dézoomer (Ctrl/Cmd + Moins).  
+    </p>
+
+    <div class="game-container">
+
+        <div id="debug-info"></div>
+
+        <div id="title-screen" class="screen">
+            <h1>Code de la Boum!</h1>
+            <p>Évaluez si les invités suivent ou enfreignent chaque règle.<br>Prenez votre décision finale d'Admettre/Refuser à la fête !</p>  
+             <div class="title-buttons">
+                <button id="start-game-button" disabled>Commencer le Jeu</button>  
+                <button id="how-to-play-button">Comment Jouer</button>  
+            </div>
+             <div class="title-options-container">
+                 <div class="title-options">
+                     <input type="checkbox" id="use-default-set-checkbox">
+                     <label for="use-default-set-checkbox">Utiliser les données d'exemple ?</label>  
+                 </div>
+             </div>
+            <div id="import-section">
+                <label for="import-textarea">...ou collez un code de données personnalisé (Remplace l'Exemple) :</label>  
+                <textarea id="import-textarea" spellcheck="false" placeholder="Exemple:\nRULE|aimePizza|TRUE|Doit aimer la pizza !\nPARTYGOER|invite_nouveau|aimeSoda=T\nPRACTICE|vocab|Traduisez : chien|dog|related_trait=aimePizza"></textarea>
+                <button id="import-data-button">Importer Données</button>  
+				<p><a href="https://docs.google.com/document/d/1ir0bZ5QhhTPmy6BMolxu6jZtORmQWQtc_a8OBhd2LSs/copy"> Voulez-vous créer votre propre code de jeu ? </a></p>  
+                <p id="import-feedback"></p>
+            </div>
+        </div>
+
+        <div id="briefing-screen" class="screen">
+            <div id="briefing-rules-box"><h3>Règles :</h3><ul id="briefing-rules"></ul></div>  
+            <div id="rep-dialogue" class="dialogue-box"><p>Dialogue du représentant...</p></div>
+            <div id="representative" class="character"></div>
+            <div id="security-briefing" class="character flipped"></div>
+            <button id="start-shift-button">Commencer le Service</button>  
+        </div>
+
+        <div id="gameplay-screen" class="screen">
+            <div class="ui-bar">
+                <span id="level-display">Niveau : 1</span>  
+                <span id="score-display">Points : 0</span>  
+                <span id="lives-display">Vies : <span class="hearts">❤️❤️❤️</span></span>  
+                <span id="quota-display">Objectif : 0/0</span>  
+                <button id="pause-button" style="margin-left: 20px;">Pause</button>  
+            </div>
+            <div id="timer-bar-container"><div id="timer-bar-fill"></div></div>
+            <div id="security-gameplay" class="character flipped"></div>
+            <div id="partygoer" class="character" style="opacity:0;"></div> <div class="dialogue-container">
+                <div id="partygoer-dialogue" class="dialogue-box">
+                    <p id="partygoer-speech">En attente...</p>  
+                </div>
+                <div id="feedback-box"></div> </div>
+            <div id="clipboard-trigger"><span>RÈGLES</span></div>  
+
+             <div id="pause-overlay">
+                 <h2>En Pause</h2>  
+                 <button id="resume-button">Reprendre</button>  
+             </div>
+        </div>
+
+        <div id="gameover-screen" class="screen">
+            <h2>FIN DU JEU</h2>  
+            <p id="final-score-gameover">Score Final : 0</p>  
+            <p id="gameover-reason">Vous n'avez plus de vies !</p>  
+            <button id="restart-button-gameover">Rejouer</button>  
+        </div>
+
+        <div id="levelcomplete-screen" class="screen">
+            <h2>Niveau Terminé !</h2>  
+            <p id="final-score-levelcomplete">Points du Niveau : 0/0</p>  
+            <p id="levelcomplete-message">Objectif atteint !</p>  
+            </div>
+
+        <div id="review-screen" class="screen">
+             <h2>Bilan du Service</h2>  
+             <div id="representative-review" class="character"></div>
+             <div id="review-dialogue" class="dialogue-box">
+                 <p id="review-initial-message"></p>
+             </div>
+             <div id="review-challenge-container">
+                <p id="review-challenge-prompt">Question d'exercice ici</p>  
+                <input type="text" id="review-challenge-input" placeholder="Votre réponse...">  
+                <button id="review-challenge-submit-button">Envoyer Réponse</button>  
+                <p id="review-challenge-feedback"></p>
+            </div>
+             <button id="continue-next-level-button">Continuer au Prochain Service</button>  
+        </div>
+
+        <div id="clipboard">
+            <h3>Évaluez Chaque Règle (✅=Suit, ❌=Enfreint)</h3>  
+            <ul id="clipboard-rules"></ul>
+            <div class="clipboard-decision-buttons">
+                <button id="clipboard-reject-button" class="reject" disabled>Refuser</button>  
+                <button id="clipboard-admit-button" class="admit" disabled>Admettre</button>  
+            </div>
+        </div>
+
+        <div id="how-to-play">
+            <h2>Comment Jouer</h2>  
+            <p>Votre but est d'ADMETTRE ou REFUSER correctement les invités selon les règles du niveau.</p>  
+            <p>Écoutez ce que dit l'invité. Ouvrez le tableau des règles (survolez 'RÈGLES') pour voir les règles. Pour CHAQUE règle, décidez si l'invité la Suit (✅) ou l'Enfreint (❌) en utilisant les boutons.</p>  
+            <p>Vous devez évaluer TOUTES les règles avant de décider. Une fois terminé, les boutons Admettre et Refuser seront activés sur le tableau.</p>  
+            <p>Cliquez sur Admettre si l'invité suit TOUTES les règles (vous avez marqué ✅ pour toutes). Cliquez sur Refuser s'il enfreint N'IMPORTE QUELLE règle (vous avez marqué ❌ pour au moins une).</p>  
+            <p>Les bonnes décisions rapportent des points et vous rapprochent de l'objectif. Les mauvaises décisions coûtent une vie (❤️). Manquer de temps coûte aussi une vie.</p>  
+            <p>À la fin du niveau, le représentant peut vous poser une question rapide d'exercice. Répondez-y pour continuer !</p>  
+            <button id="close-how-to-play">Fermer</button>  
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const enableDebug = false; // Set to true to show console debug messages
+        const MAX_LIVES = 3;       // Max lives possible
+        const STARTING_LIVES = 3;  // Lives at the start of the game
+        const TIMER_DURATION = 35; // Seconds per partygoer decision
+        const QUOTA_MAX = 10;      // Maximum partygoers needed per level
+        const TYPEWRITER_SPEED = 15; // Milliseconds per character
+        const TIMER_INTERVAL_MS = 100; // How often the timer bar updates (milliseconds)
+        const CLIPBOARD_HIDE_DELAY = 150; // Milliseconds to wait before hiding clipboard
+
+        // --- Game State Variables ---
+        let currentGameMode = 'standard'; // 'standard' or 'custom'
+        let currentLevel = 1;
+        let lives = STARTING_LIVES;
+        let score = 0;
+        let quota = 0; // Target number of correct decisions for the level
+        let quotaMet = 0; // Correct decisions made in the current level
+        let currentRules = []; // Rules for the current level
+        let currentPartygoer = null; // The partygoer currently being evaluated
+        let isPartygoerAcceptable = false; // Whether the current partygoer *should* be admitted
+        let gameActive = false; // Is the player currently able to interact (make decisions)? (Set true after typewriter)
+        let processingDecision = false; // Is the game currently animating/handling a decision?
+        let timerInterval = null; // Holds the interval ID for the timer
+        let timeLeft = TIMER_DURATION; // Seconds remaining for the current decision
+        let timerActive = false; // Is the timer currently running?
+        let ruleAssessments = {}; // Player's assessment for each rule { ruleIndex: 'followed'/'broken'/null }
+        let typewriterInterval = null; // Holds the interval ID for the typewriter effect
+        let currentChallenge = null; // The practice item for the review screen
+        let customDataImported = false; // Flag if custom data has been loaded
+        let defaultGameDataParty = {}; // Holds the default game data structure
+        let isPaused = false; // Is the game currently paused?
+        let allKnownTraitKeys = new Set(); // Set of all trait keys known from rules/phrases/partygoers
+        let triggerHideTimeout = null; // Timeout ID for hiding clipboard after leaving trigger
+        let clipboardHideTimeout = null; // Timeout ID for hiding clipboard after leaving clipboard
+
+        // --- Debug Logging ---
+        function debugLog(message) {
+            if (!enableDebug) return;
+            const timestamp = new Date().toLocaleTimeString();
+            console.log(`[DEBUG ${timestamp}] ${message}`);
+        }
+        debugLog("Script loading...");
+
+        // --- DOM Element References ---
+        // Cache frequently accessed DOM elements for performance
+        const gameContainer = document.querySelector('.game-container');
+        const titleScreen = document.getElementById('title-screen');
+        const briefingScreen = document.getElementById('briefing-screen');
+        const gameplayScreen = document.getElementById('gameplay-screen');
+        const levelCompleteScreen = document.getElementById('levelcomplete-screen');
+        const gameOverScreen = document.getElementById('gameover-screen');
+        const reviewScreen = document.getElementById('review-screen');
+        // Briefing Screen Elements
+        const representativeChar = document.getElementById('representative');
+        const securityBriefingChar = document.getElementById('security-briefing');
+        const briefingRulesBox = document.getElementById('briefing-rules-box');
+        const briefingRulesList = document.getElementById('briefing-rules');
+        const repDialogueBox = document.getElementById('rep-dialogue');
+        const repDialogueText = repDialogueBox.querySelector('p');
+        const startShiftButton = document.getElementById('start-shift-button');
+        // Title Screen Elements
+        const startGameButton = document.getElementById('start-game-button');
+        const howToPlayButton = document.getElementById('how-to-play-button');
+        const useDefaultSetCheckbox = document.getElementById('use-default-set-checkbox');
+        const importTextarea = document.getElementById('import-textarea');
+        const importDataButton = document.getElementById('import-data-button');
+        const importFeedback = document.getElementById('import-feedback');
+        // Gameplay Screen Elements
+        const securityGameplayChar = document.getElementById('security-gameplay');
+        const partygoerElement = document.getElementById('partygoer');
+        const dialogueContainer = document.querySelector('.dialogue-container');
+        const partygoerDialogueBox = document.getElementById('partygoer-dialogue');
+        const partygoerSpeech = document.getElementById('partygoer-speech');
+        const feedbackBox = document.getElementById('feedback-box');
+        const levelDisplay = document.getElementById('level-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display').querySelector('.hearts');
+        const quotaDisplay = document.getElementById('quota-display');
+        const timerBarFill = document.getElementById('timer-bar-fill');
+        const clipboard = document.getElementById('clipboard');
+        const clipboardRulesList = document.getElementById('clipboard-rules');
+        const clipboardTrigger = document.getElementById('clipboard-trigger');
+        const admitButton = document.getElementById('clipboard-admit-button');
+        const rejectButton = document.getElementById('clipboard-reject-button');
+        // Pause/Resume Elements
+        const pauseButton = document.getElementById('pause-button');
+        const resumeButton = document.getElementById('resume-button');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        // How to Play Overlay Elements
+        const howToPlayOverlay = document.getElementById('how-to-play');
+        const closeHowToPlayButton = document.getElementById('close-how-to-play');
+        // Level Complete Screen Elements (Intermediate)
+        const levelCompleteScoreDisplay = document.getElementById('final-score-levelcomplete');
+        const levelCompleteMessage = document.getElementById('levelcomplete-message');
+        // Review Screen Elements
+        const reviewDialogueBox = document.getElementById('review-dialogue');
+        const reviewInitialMessage = document.getElementById('review-initial-message');
+        const representativeReviewChar = document.getElementById('representative-review');
+        const reviewChallengeContainer = document.getElementById('review-challenge-container');
+        const reviewChallengePrompt = document.getElementById('review-challenge-prompt');
+        const reviewChallengeInput = document.getElementById('review-challenge-input');
+        const reviewChallengeSubmitButton = document.getElementById('review-challenge-submit-button');
+        const reviewChallengeFeedback = document.getElementById('review-challenge-feedback');
+        const continueNextLevelButton = document.getElementById('continue-next-level-button');
+        // Game Over Screen Elements
+        const gameOverScoreDisplay = document.getElementById('final-score-gameover');
+        const gameOverReason = document.getElementById('gameover-reason');
+        const restartButtonGameOver = document.getElementById('restart-button-gameover');
+        debugLog("DOM Elements cached.");
+
+        // --- Default Game Data (French) --- Translation of Spanish default data
+        defaultGameDataParty = {
+             rules: [
+                 // Simple Rules
+                 { trait: 'aimeSoda', condition: false, text: 'Ne doit pas aimer le soda.' },
+                 { trait: 'aimePizza', condition: true, text: 'Doit aimer la pizza.' },
+                 { trait: 'aCarte', condition: true, text: 'A besoin de sa carte.' },
+                 { trait: 'jouePiscine', condition: false, text: 'Ne doit pas jouer dans la piscine.' },
+                 { trait: 'apporteCadeau', condition: true, text: 'Doit apporter un cadeau.' },
+                 { trait: 'aInvitation', condition: true, text: 'Doit avoir une invitation.' },
+                 { trait: 'aimeMusique', condition: true, text: 'Doit aimer la musique.' },
+                 { trait: 'apporteSnacks', condition: true, text: 'Doit apporter des snacks.' },
+                 { trait: 'estVIP', condition: true, text: 'Admettre les VIP.' },
+                 { trait: 'surListeInvites', condition: true, text: 'Doit être sur la liste.' },
+                 { trait: 'aAccompagnant', condition: false, text: 'Accompagnants non autorisés.' },
+                 // Complex Rules (with exceptions)
+                 { trait: 'jouePiscine', condition: false, isDouble: true, exception: { trait: 'apporteSnacks', condition: true }, text_override: 'Ne pas jouer dans la piscine, sauf si apporte des snacks.' },
+                 { trait: 'aAccompagnant', condition: false, isDouble: true, exception: { trait: 'estVIP', condition: true }, text_override: 'Pas d\'accompagnants, sauf si VIP.' },
+                 { trait: 'aimeSoda', condition: false, isDouble: true, exception: { trait: 'apporteCadeau', condition: true }, text_override: 'Ne doit pas aimer le soda, sauf si apporte un cadeau.' },
+             ],
+             phrases: { // Possible things partygoers might say for each trait state (Translated)
+                 aimeSoda: { true: ["J'aime le soda.", "Un soda serait bien.", "Je suis fan de soda."], false: ["Je n'aime pas le soda.", "Je ne veux pas de soda.", "J'évite le soda aujourd'hui."] },
+                 aimePizza: { true: ["J'aime la pizza.", "La pizza, c'est génial !", "J'espère qu'il y a de la pizza !"], false: ["Je n'aime pas la pizza.", "Pizza ? Non merci.", "Je n'ai pas envie de pizza."] },
+                 aCarte: { true: ["J'ai ma carte.", "Voici ma carte.", "Carte ? Oui, je l'ai."], false: ["Je n'ai pas ma carte.", "J'ai dû oublier ma carte.", "Oups, pas de carte."] },
+                 jouePiscine: { true: ["Je veux jouer dans la piscine.", "J'ai hâte d'aller à la piscine !", "La piscine est ouverte ?"], false: ["Je ne jouerai pas dans la piscine.", "Je n'irai pas à la piscine aujourd'hui.", "Je reste au sec, merci."] },
+                 apporteCadeau: { true: ["J'ai apporté un cadeau.", "J'ai quelque chose pour l'hôte.", "Cadeau ? Oui, voilà."], false: ["Je n'ai pas apporté de cadeau.", "Oups, j'ai oublié le cadeau.", "Je n'ai pas pu trouver de cadeau à temps."] },
+                 aInvitation: { true: ["J'ai une invitation.", "Mon invitation est ici.", "J'ai reçu l'invitation !"], false: ["Je n'ai pas d'invitation.", "On dirait que je n'ai pas mon invitation.", "Fallait-il une invitation ?"] },
+                 aimeMusique: { true: ["J'aime cette musique.", "Cette musique est bonne !", "Quelle bonne musique !"], false: ["Je n'aime pas cette musique.", "Cette musique n'est pas mon style.", "Mmm, cette musique ne me plaît pas."] },
+                 apporteSnacks: { true: ["J'ai apporté des snacks.", "J'ai des snacks à partager.", "Snacks ? C'est bon."], false: ["Je n'ai pas apporté de snacks.", "Je n'ai rien apporté à grignoter, désolé.", "Je n'ai pas apporté de snacks."] },
+                 estVIP: { true: ["Je suis VIP.", "Liste VIP, c'est moi.", "Je devrais être sur la liste VIP."], false: ["Je ne suis pas VIP.", "Juste un invité normal.", "Je n'ai pas de statut VIP."] },
+                 surListeInvites: { true: ["Je suis sur la liste d'invités.", "Mon nom devrait être sur la liste.", "Cherchez mon nom sur la liste."], false: ["Je ne suis pas sur la liste d'invités.", "Y a-t-il une liste d'invités ?", "Mmm, je ne suis peut-être pas sur la liste."] },
+                 aAccompagnant: { true: ["J'ai un accompagnant.", "J'ai amené quelqu'un avec moi.", "Mon accompagnant est aussi là."], false: ["Je n'ai pas d'accompagnant.", "Je suis venu seul(e).", "Juste moi ce soir."] }
+             },
+             partygoers: [ // Definitions of potential partygoers and their traits (IDs kept, traits translated conceptually)
+                 { id: 'pg1', traits: { aimeSoda: false, aimePizza: true, aCarte: true, jouePiscine: false, apporteCadeau: false, aInvitation: false, aimeMusique: true, apporteSnacks: true, estVIP: false, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg2', traits: { aimeSoda: true, aimePizza: false, aCarte: false, jouePiscine: false, apporteCadeau: false, aInvitation: false, aimeMusique: false, apporteSnacks: false, estVIP: false, surListeInvites: false, aAccompagnant: false } },
+                 { id: 'pg3', traits: { aimeSoda: true, aimePizza: true, aCarte: false, jouePiscine: false, apporteCadeau: true, aInvitation: true, aimeMusique: true, apporteSnacks: false, estVIP: true, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg4', traits: { aimeSoda: false, aimePizza: false, aCarte: true, jouePiscine: false, apporteCadeau: false, aInvitation: true, aimeMusique: false, apporteSnacks: true, estVIP: false, surListeInvites: true, aAccompagnant: true } },
+                 { id: 'pg5', traits: { aimeSoda: true, aimePizza: true, aCarte: true, jouePiscine: false, apporteCadeau: false, aInvitation: true, aimeMusique: true, apporteSnacks: true, estVIP: true, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg6', traits: { aimeSoda: false, aimePizza: false, aCarte: false, jouePiscine: false, apporteCadeau: true, aInvitation: true, aimeMusique: true, apporteSnacks: false, estVIP: false, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg7', traits: { aimeSoda: true, aimePizza: true, aCarte: true, jouePiscine: false, apporteCadeau: false, aInvitation: true, aimeMusique: true, apporteSnacks: true, estVIP: true, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg8', traits: { aimeSoda: false, aimePizza: true, aCarte: true, jouePiscine: false, apporteCadeau: false, aInvitation: true, aimeMusique: true, apporteSnacks: true, estVIP: false, surListeInvites: true, aAccompagnant: false } },
+                 { id: 'pg9', traits: { aimeSoda: true, aimePizza: true, aCarte: true, jouePiscine: true, apporteCadeau: false, aInvitation: true, aimeMusique: true, apporteSnacks: true, estVIP: true, surListeInvites: true, aAccompagnant: true } },
+                 { id: 'pg10', traits: { aimeSoda: false, aimePizza: false, aCarte: false, jouePiscine: false, apporteCadeau: false, aInvitation: false, aimeMusique: false, apporteSnacks: true, estVIP: false, surListeInvites: false, aAccompagnant: false } },
+             ],
+             partygoerIDs: new Set(['pg1', 'pg2', 'pg3', 'pg4', 'pg5', 'pg6', 'pg7', 'pg8', 'pg9', 'pg10']),
+             practiceItems: [ // Questions asked at the end of a level (Translated)
+                 { type: 'conjugation', prompt: "Conjuguez 'manger' (il, présent)", answer: 'mange', feedback_if_wrong: 'Les verbes réguliers en -er se terminent par -e pour il/elle/on.', related_trait: null },
+                 { type: 'vocab', prompt: "Traduisez : 'goodbye'", answer: 'au revoir', feedback_if_wrong: "'Au revoir' est la traduction la plus courante.", related_trait: null },
+                 { type: 'conjugation', prompt: "Conjuguez 'finir' (nous, présent)", answer: 'finissons', feedback_if_wrong: 'Les verbes réguliers en -ir se terminent par -issons pour nous.', related_trait: null },
+                 { type: 'vocab', prompt: "Traduisez : 'thank you'", answer: 'merci', feedback_if_wrong: null, related_trait: null },
+                 { type: 'vocab', prompt: "Traduisez : 'pizza'", answer: 'pizza', feedback_if_wrong: null, related_trait: 'aimePizza' }, // Related trait helps select relevant questions
+             ]
+        };
+        // Active game data - starts as a copy of default or gets replaced by import
+        let gameData = {};
+
+        /**
+         * Loads the specified game data set (default or custom) into the active gameData.
+         * Also ensures all partygoers have entries for all known traits.
+         * @param {boolean | 'custom'} source - True to load default, 'custom' if custom data was imported.
+         * @param {object | null} [data=null] - The parsed custom data object (only used if source is 'custom').
+         */
+        function loadDataSet(source, data = null) {
+            debugLog(`loadDataSet called with source: ${source}`);
+            if (source === 'custom' && data) {
+                // Load provided custom data
+                gameData = data; // Assign the parsed custom data
+                currentGameMode = 'custom';
+                debugLog("Loading provided custom game data set.");
+            } else if (source === true) {
+                // Load default data
+                gameData = JSON.parse(JSON.stringify(defaultGameDataParty)); // Deep copy
+                currentGameMode = 'standard';
+                customDataImported = false; // Ensure flag is reset when loading default
+                debugLog("Loaded default game data set.");
+            }
+            // Removed fallback for 'customDataImported && source !== custom' as it was confusing.
+            // If import fails, importSimpleData calls loadDataSet(true) explicitly.
+            else {
+                // Fallback / Error case - Load default if source is invalid
+                gameData = JSON.parse(JSON.stringify(defaultGameDataParty));
+                currentGameMode = 'standard';
+                customDataImported = false;
+                debugLog("WARN: Invalid source in loadDataSet, loading default set.");
+            }
+
+            // --- Post-Load Processing (Common to Default and Custom) ---
+            allKnownTraitKeys.clear();
+            if (gameData && gameData.rules && Array.isArray(gameData.rules)) { // Add Array check
+                // Collect all known trait keys from the *active* gameData
+                gameData.rules.forEach(r => {
+                    if (r && r.trait) { // Check if rule and trait exist
+                        allKnownTraitKeys.add(r.trait);
+                        if (r.exception && r.exception.trait) allKnownTraitKeys.add(r.exception.trait);
+                    } else {
+                        debugLog("Warning: Found invalid rule structure during trait collection.");
+                    }
+                });
+                Object.keys(gameData.phrases || {}).forEach(t => allKnownTraitKeys.add(t));
+                (gameData.partygoers || []).forEach(p => {
+                     if (p && p.traits) { // Check partygoer and traits exist
+                         Object.keys(p.traits).forEach(t => allKnownTraitKeys.add(t));
+                     } else {
+                         debugLog(`Warning: Found invalid partygoer structure (ID: ${p?.id}) during trait collection.`);
+                     }
+                });
+
+
+                // Ensure all partygoers in the *active* gameData have default values for missing traits
+                (gameData.partygoers || []).forEach(pg => {
+                    if (pg && pg.traits) { // Check partygoer and traits exist
+                        allKnownTraitKeys.forEach(trait => {
+                            if (!(trait in pg.traits)) {
+                                pg.traits[trait] = false; // Default missing traits to false
+                                // debugLog(`Added missing trait '${trait}'=false to partygoer ${pg.id}`);
+                            }
+                        });
+                    }
+                });
+                debugLog(`Active data set processed (${currentGameMode}). Rules: ${gameData.rules?.length || 0}, Partygoers: ${gameData.partygoers?.length || 0}, Practice: ${gameData.practiceItems?.length || 0}, Traits: ${allKnownTraitKeys.size}`);
+            } else {
+                // This indicates a major issue either with default data or the imported structure
+                debugLog(`CRITICAL ERROR: gameData or gameData.rules is invalid after assignment in loadDataSet! gameData.rules: ${JSON.stringify(gameData?.rules)}`);
+                if(startGameButton) startGameButton.disabled = true;
+                if(importFeedback) {
+                    importFeedback.textContent = "Erreur fatale lors du traitement des données. Essayez de recharger ou vérifiez les données importées."; // Translated Fatal error
+                    importFeedback.className = 'error';
+                }
+                // Clear potentially corrupted gameData
+                gameData = { rules: [], phrases: {}, partygoers: [], partygoerIDs: new Set(), practiceItems: [] };
+            }
+        }
+
+        // --- Core Game Logic ---
+
+        /**
+         * Switches the visible screen in the game container.
+         * @param {HTMLElement} screenToShow - The screen element to make active.
+         */
+        function switchScreen(screenToShow) {
+            debugLog(`Switching screen to: ${screenToShow.id}`);
+            // Hide all screens
+            titleScreen.classList.remove('active');
+            briefingScreen.classList.remove('active');
+            gameplayScreen.classList.remove('active');
+            levelCompleteScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            reviewScreen.classList.remove('active');
+            // Hide overlays/dynamic elements
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+            howToPlayOverlay.classList.remove('active');
+            pauseOverlay.style.display = 'none'; // Ensure pause overlay is hidden
+            // Show the target screen
+            screenToShow.classList.add('active');
+        }
+
+        /**
+         * Updates the UI elements (score, lives, level, quota, timer).
+         */
+        function updateUI() {
+            if (!scoreDisplay || !levelDisplay || !quotaDisplay || !livesDisplay) {
+                debugLog("ERROR: One or more UI display elements not found!");
+                return;
+            }
+            scoreDisplay.textContent = `Points : ${score}`; // Translated
+            levelDisplay.textContent = `Niveau : ${currentLevel}`; // Translated
+            quotaDisplay.textContent = `Objectif : ${quotaMet}/${quota}`; // Translated
+            // Update hearts display
+            let hearts = '';
+            for (let i = 0; i < MAX_LIVES; i++) {
+                hearts += (i < lives) ? '❤️' : '🖤'; // Red heart for life, black heart for lost life
+            }
+            livesDisplay.innerHTML = hearts;
+            updateTimerDisplay(); // Update timer bar separately
+            // debugLog(`UI Updated: Lvl ${currentLevel}, Score ${score}, Lives ${lives}, Quota ${quotaMet}/${quota}`);
+        }
+
+        /**
+         * Updates the visual timer bar based on timeLeft.
+         */
+        function updateTimerDisplay() {
+            if (timerBarFill) {
+                const percentage = Math.max(0, (timeLeft / TIMER_DURATION) * 100);
+                timerBarFill.style.width = `${percentage}%`;
+                // Change color based on time remaining
+                if (percentage < 25) {
+                    timerBarFill.style.backgroundColor = '#e74c3c'; // Red (Low time)
+                } else if (percentage < 50) {
+                    timerBarFill.style.backgroundColor = '#e67e22'; // Orange (Medium time)
+                } else {
+                    timerBarFill.style.backgroundColor = '#f1c40f'; // Yellow (High time)
+                }
+            } else {
+                debugLog("Timer bar fill element not found!");
+            }
+        }
+
+        /**
+         * Generates the rules for the current level based on level number.
+         * Selects a mix of standard and complex rules.
+         * @param {number} level - The current game level.
+         * @returns {Array<object>} - An array of rule objects for the level.
+         */
+        function generateRules(level) {
+            debugLog(`Generating rules for Level ${level}`);
+            const availableRules = gameData.rules || []; // Use active gameData
+            if (!availableRules || availableRules.length === 0) {
+                debugLog(`CRITICAL ERROR: No rules available in active dataset for level generation!`);
+                return [];
+            }
+
+            // Separate rules into standard and complex (double) pools
+            const standardRulesPool = availableRules.filter(rule => !rule.isDouble);
+            const complexRulesPool = availableRules.filter(rule => rule.isDouble);
+            let selectedRules = [];
+            let numStandard = 0;
+            let numComplex = 0;
+
+            // Define rule composition per level
+            if (level === 1) { numStandard = 1; numComplex = 0; }       // 1 Standard
+            else if (level === 2) { numStandard = 2; numComplex = 0; }    // 2 Standard
+            else if (level === 3) { numStandard = 3; numComplex = 0; }    // 3 Standard
+            else if (level === 4) { numStandard = 2; numComplex = 1; }    // 2 Standard, 1 Complex
+            else if (level === 5) { numStandard = 1; numComplex = 2; }    // 1 Standard, 2 Complex
+            else { numStandard = 0; numComplex = 3; }                     // 3 Complex (Level 6+)
+
+            // Ensure we don't try to select more rules than available
+            numStandard = Math.min(numStandard, standardRulesPool.length);
+            numComplex = Math.min(numComplex, complexRulesPool.length);
+
+            debugLog(`Level ${level}: Selecting ${numStandard} standard, ${numComplex} complex rules.`);
+
+            // Select rules randomly from pools
+            shuffleArray(standardRulesPool);
+            for (let i = 0; i < numStandard; i++) {
+                selectedRules.push(standardRulesPool[i]);
+            }
+
+            shuffleArray(complexRulesPool);
+            for (let i = 0; i < numComplex; i++) {
+                selectedRules.push(complexRulesPool[i]);
+            }
+
+            // Final shuffle and prepare display text
+            currentRules = shuffleArray(selectedRules);
+            currentRules.forEach(rule => {
+                // Use override text if available, otherwise standard text
+                rule.displayText = rule.text_override || rule.text;
+            });
+            debugLog(`Generated ${currentRules.length} final rules: ${JSON.stringify(currentRules.map(r => r.displayText))}`);
+            return currentRules;
+        }
+
+        /**
+         * Checks if a partygoer complies with ALL given rules.
+         * @param {object} partygoer - The partygoer object.
+         * @param {Array<object>} rulesToCheck - The array of rules to check against.
+         * @returns {boolean} - True if compliant, false otherwise.
+         */
+        function isPartygoerCompliant(partygoer, rulesToCheck) {
+            if (!partygoer || !partygoer.traits) {
+                debugLog("Error: Invalid partygoer data in isPartygoerCompliant.");
+                return false; // Cannot be compliant without traits
+            }
+            if (!rulesToCheck || rulesToCheck.length === 0) {
+                return true; // Compliant if there are no rules
+            }
+            // Check each rule; if any are violated, the partygoer is not compliant
+            for (const rule of rulesToCheck) {
+                if (doesPartygoerViolateRule(partygoer, rule)) {
+                    return false; // Found a violation
+                }
+            }
+            return true; // No violations found
+        }
+
+        /**
+         * Checks if a partygoer violates a specific rule, considering exceptions.
+         * @param {object} partygoer - The partygoer object.
+         * @param {object} rule - The rule object to check.
+         * @returns {boolean} - True if the rule is violated, false otherwise.
+         */
+        function doesPartygoerViolateRule(partygoer, rule) {
+             if (!partygoer || !partygoer.traits || !rule) {
+                 debugLog("Error: Invalid data in doesPartygoerViolateRule.");
+                 return false; // Cannot violate if data is invalid
+             }
+             const traitName = rule.trait;
+             const requiredCondition = rule.condition; // true = must have trait, false = must NOT have trait
+             const partygoerHasTrait = partygoer.traits[traitName] === true;
+
+             let ruleViolated = false;
+             // Violation occurs if rule requires trait presence and partygoer lacks it,
+             // OR if rule requires trait absence and partygoer has it.
+             if (requiredCondition === true && !partygoerHasTrait) {
+                 ruleViolated = true;
+             } else if (requiredCondition === false && partygoerHasTrait) {
+                 ruleViolated = true;
+             }
+
+             // Check for exceptions ONLY if the rule was initially violated
+             if (ruleViolated && rule.isDouble && rule.exception) {
+                 const exceptionTraitName = rule.exception.trait;
+                 const exceptionCondition = rule.exception.condition; // The state of the exception trait that grants the exception
+                 const partygoerMeetsException = partygoer.traits[exceptionTraitName] === exceptionCondition;
+
+                 // If the partygoer meets the exception condition, the violation is overridden.
+                 if (partygoerMeetsException) {
+                     ruleViolated = false;
+                     // debugLog(`Partygoer ${partygoer.id} violated rule '${rule.displayText}' but met exception '${exceptionTraitName}'=${exceptionCondition}.`);
+                 }
+             }
+             // if (ruleViolated) debugLog(`Partygoer ${partygoer.id} VIOLATED rule: ${rule.displayText}`);
+             return ruleViolated;
+        }
+
+        /**
+         * Sets up the game state for a new level.
+         * Generates rules, updates UI, resets timer, and shows the briefing screen.
+         * @param {number} level - The level number to set up.
+         */
+        function setupLevel(level) {
+            debugLog(`Setting up Level ${level}`);
+            currentLevel = level;
+            quotaMet = 0;
+            // Calculate quota for the level (increases slightly, caps at QUOTA_MAX)
+            quota = Math.min(currentLevel + 2, QUOTA_MAX);
+            gameActive = false; // Not active until shift starts
+            processingDecision = false;
+            ruleAssessments = {}; // Clear previous assessments
+            currentRules = generateRules(level); // Get rules for this level using active gameData
+
+            // Check if rule generation failed (e.g., no rules in dataset)
+            if (!currentRules || currentRules.length === 0) {
+                 debugLog("CRITICAL ERROR: Failed to generate rules for level. Cannot proceed.");
+                 gameOver("Erreur Système : Impossible de générer les règles."); // Translated System Error
+                 return;
+            }
+
+
+            // Clear and populate rule lists for briefing and clipboard
+            briefingRulesList.innerHTML = '';
+            clipboardRulesList.innerHTML = '';
+
+            if (!briefingRulesList || !clipboardRulesList) {
+                debugLog("CRITICAL ERROR: Rule/Clipboard list element(s) not found during setupLevel!");
+                return; // Cannot proceed without lists
+            }
+
+            currentRules.forEach((rule, index) => {
+                // Initialize assessment state
+                ruleAssessments[index] = null; // null = unassessed
+
+                // Add rule to briefing list
+                const liBriefing = document.createElement('li');
+                liBriefing.textContent = rule.displayText;
+                briefingRulesList.appendChild(liBriefing);
+
+                // Add rule to clipboard list with assessment buttons
+                const liClipboard = document.createElement('li');
+                liClipboard.dataset.ruleIndex = index; // Store index for reference
+
+                const ruleTextSpan = document.createElement('span');
+                ruleTextSpan.classList.add('rule-text');
+                ruleTextSpan.textContent = rule.displayText;
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.classList.add('rule-assessment-buttons');
+
+                // Followed (✅) button
+                const followedButton = document.createElement('button');
+                followedButton.classList.add('assess-btn', 'followed');
+                followedButton.dataset.ruleIndex = index;
+                followedButton.dataset.assessment = 'followed';
+                followedButton.textContent = '✅';
+                followedButton.addEventListener('click', handleAssessmentButtonClick);
+                followedButton.disabled = true; // Disabled until partygoer arrives
+
+                // Broken (❌) button
+                const brokenButton = document.createElement('button');
+                brokenButton.classList.add('assess-btn', 'broken');
+                brokenButton.dataset.ruleIndex = index;
+                brokenButton.dataset.assessment = 'broken';
+                brokenButton.textContent = '❌';
+                brokenButton.addEventListener('click', handleAssessmentButtonClick);
+                brokenButton.disabled = true; // Disabled until partygoer arrives
+
+                buttonContainer.appendChild(followedButton);
+                buttonContainer.appendChild(brokenButton);
+                liClipboard.appendChild(ruleTextSpan);
+                liClipboard.appendChild(buttonContainer);
+                clipboardRulesList.appendChild(liClipboard);
+            });
+            debugLog("Briefing & Clipboard rules lists populated.");
+
+            // Set representative's dialogue for the briefing
+            let repSpeech = `Bien, Niveau ${level}. Il y a ${currentRules.length} règles cette fois. Évaluez-les toutes (✅/❌) sur le tableau, puis décidez. Objectif : <strong>${quota}</strong>.`; // Translated
+            if (level === 1) {
+                repSpeech = `Très bien, nouvelle recrue, premier service. Ouvre le tableau des règles en bas ('RÈGLES'). Pour chaque règle, décide si l'invité la Suit (✅) ou l'Enfreint (❌). Évalue TOUTES les règles, puis clique sur Admettre ou Refuser. Objectif : <strong>${quota}</strong>. Bonne chance !`; // Translated detailed intro
+            }
+            if(repDialogueText) repDialogueText.innerHTML = repSpeech;
+
+            // Update UI displays, reset timer, disable main action buttons
+            updateUI();
+            resetTimer();
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+
+            // Position characters for briefing
+            if(representativeChar) representativeChar.classList.remove('flipped');
+            if(securityBriefingChar) securityBriefingChar.classList.add('flipped');
+
+            // Show the briefing screen
+            switchScreen(briefingScreen);
+            debugLog("Briefing screen setup complete.");
+        }
+
+        /**
+         * Starts the gameplay shift after the briefing.
+         */
+        function startShift() {
+            debugLog("Start Shift button clicked.");
+            if (processingDecision) return; // Prevent starting while something else is happening
+            switchScreen(gameplayScreen);
+            debugLog("Switched to gameplay screen.");
+            loadNextPartygoer(); // Load the first partygoer for the level
+        }
+
+        // --- Timer Logic ---
+
+        /**
+         * Starts the decision timer.
+         */
+        function startTimer() {
+            if (timerActive || isPaused) return; // Don't start if already running or paused
+            debugLog("Starting decision timer.");
+            timerActive = true;
+            timeLeft = TIMER_DURATION; // Ensure timer starts full
+            updateTimerDisplay(); // Show initial bar state
+            // Set interval to decrease time and update display
+            timerInterval = setInterval(() => {
+                if (isPaused) return; // Do nothing if paused
+
+                timeLeft -= (TIMER_INTERVAL_MS / 1000); // Decrease time
+                timeLeft = Math.max(0, timeLeft); // Prevent negative time
+                updateTimerDisplay(); // Update visual bar
+
+                // Check for timeout
+                if (timeLeft <= 0) {
+                    handleTimeout();
+                }
+            }, TIMER_INTERVAL_MS);
+        }
+
+        /**
+         * Stops the decision timer.
+         */
+        function stopTimer() {
+            if (!timerActive) return; // Only stop if active
+            // debugLog("Stopping decision timer."); // Less noisy
+            clearInterval(timerInterval); // Clear the interval
+            timerInterval = null;
+            timerActive = false;
+        }
+
+        /**
+         * Resets the timer to its full duration.
+         */
+        function resetTimer() {
+            stopTimer(); // Ensure any existing timer is stopped
+            timeLeft = TIMER_DURATION;
+            updateTimerDisplay(); // Update visual bar to full
+            // debugLog("Timer reset.");
+        }
+
+        /**
+         * Handles the timeout event when the timer reaches zero.
+         */
+        function handleTimeout() {
+            debugLog("TIMER TIMEOUT!");
+            stopTimer(); // Stop the timer interval
+            stopTypewriter(); // Stop any ongoing dialogue typing
+
+            // Ignore timeout if not on gameplay screen or already processing a decision
+            if (!gameplayScreen.classList.contains('active') || processingDecision) {
+                debugLog("Timeout ignored (screen not active or processing).");
+                return;
+            }
+
+            processingDecision = true; // Prevent other actions
+            gameActive = false; // Player can no longer interact
+
+            // Disable interaction buttons
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+
+            // Lose a life
+            lives--;
+            debugLog(`Lost a life due to timeout! Lives left: ${lives}`);
+            updateUI(); // Update lives display
+
+            // Hide clipboard if open
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+
+            // Show timeout feedback message
+            if(feedbackBox) {
+                feedbackBox.innerHTML = "<span class='feedback-message feedback-incorrect'>Temps écoulé ! (-1 Vie)</span>"; // Translated
+                feedbackBox.classList.add('visible');
+            }
+
+            // Trigger reject animation for the partygoer
+            triggerAnimation(partygoerElement, 'animate-reject', () => {
+                debugLog("Timeout animation finished.");
+                if (lives <= 0) {
+                    // Game over if out of lives
+                    debugLog("Game Over after timeout.");
+                    gameOver("Vous avez manqué de temps et de vies !"); // Translated
+                } else {
+                    // Load next partygoer if lives remain
+                    debugLog("Loading next partygoer after timeout.");
+                    loadNextPartygoer();
+                }
+            });
+        }
+
+        // --- Partygoer & Dialogue Logic ---
+
+        /**
+         * Selects a random phrase for a given trait and its value.
+         * @param {string} traitName - The name of the trait.
+         * @param {boolean} traitValue - The value of the trait (true/false).
+         * @returns {string} - A randomly selected phrase or a fallback string.
+         */
+        function getRandomTraitPhrase(traitName, traitValue) {
+            const stateKey = traitValue ? 'true' : 'false'; // Key for the phrases object
+            const phrasesPool = gameData.phrases || {}; // Use active gameData
+
+            // Check if phrases exist for this trait and state
+            if (phrasesPool[traitName] && phrasesPool[traitName][stateKey] && phrasesPool[traitName][stateKey].length > 0) {
+                const phrases = phrasesPool[traitName][stateKey];
+                const randomIndex = Math.floor(Math.random() * phrases.length);
+                return phrases[randomIndex];
+            } else {
+                // Fallback if no specific phrase is defined
+                // debugLog(`Warning: No phrasing found for trait '${traitName}' state '${stateKey}'. Using fallback.`);
+                return `${traitName}: ${traitValue}`; // e.g., "aimePizza: true"
+            }
+        }
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates algorithm.
+         * @param {Array} array - The array to shuffle.
+         * @returns {Array} - The shuffled array.
+         */
+        function shuffleArray(array) {
+            if (!array) return [];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+            return array;
+        }
+
+        /**
+         * Animates the typewriter effect for displaying text character by character.
+         * @param {HTMLElement} element - The HTML element to display the text in.
+         * @param {string} text - The text to display (can include <br> for new lines).
+         * @param {function} [callback] - Optional function to call when typing is complete.
+         */
+        function typewriterEffect(element, text, callback) {
+            stopTypewriter(); // Clear any previous typewriter interval
+            if (!element) {
+                debugLog("Error: Typewriter target element not found.");
+                if (callback) callback();
+                return;
+            }
+            element.innerHTML = ''; // Clear existing content
+            let i = 0; // Character index within the current line
+            const lines = text.split('<br>'); // Split text into lines
+            let currentLine = 0; // Index of the current line being typed
+            let currentText = ''; // Text typed so far on the current line
+
+            typewriterInterval = setInterval(() => {
+                if (isPaused) return; // Don't type if paused
+
+                if (currentLine < lines.length) {
+                    const line = lines[currentLine];
+                    if (!line && i === 0) { // Handle potential empty lines between <br>
+                        currentLine++;
+                        if (currentLine < lines.length) element.innerHTML += '<br>'; // Add the break if it wasn't the last line
+                        return;
+                    }
+
+                    if (i < line.length) {
+                        // Append next character
+                        currentText += line.charAt(i);
+                        // Update element content with previous lines and current progress
+                        element.innerHTML = lines.slice(0, currentLine).join('<br>') + (currentLine > 0 ? '<br>' : '') + currentText;
+                        i++;
+                    } else {
+                        // End of line reached
+                        currentLine++;
+                        i = 0;
+                        currentText = '';
+                        // Add line break if moving to a new line that exists
+                        if (currentLine < lines.length) {
+                            element.innerHTML += '<br>';
+                        }
+                    }
+                } else {
+                    // All lines finished
+                    stopTypewriter();
+                    if (callback) callback(); // Execute callback if provided
+                }
+            }, TYPEWRITER_SPEED);
+        }
+
+        /**
+         * Stops the typewriter effect interval.
+         */
+        function stopTypewriter() {
+            if (typewriterInterval) {
+                clearInterval(typewriterInterval);
+                typewriterInterval = null;
+            }
+        }
+
+        /**
+         * Loads the next partygoer, sets up their dialogue and image, and starts the interaction flow.
+         */
+        function loadNextPartygoer() {
+            debugLog(`Attempting to load next partygoer...`);
+            resetTimer(); // Reset timer for the new partygoer
+            stopTypewriter(); // Stop any previous dialogue typing
+
+            // Reset state for the new interaction
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            ruleAssessments = {}; // Clear assessments from previous partygoer
+
+            // Hide clipboard and feedback
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+            if(feedbackBox) {
+                feedbackBox.innerHTML = '';
+                feedbackBox.classList.remove('visible');
+            }
+            if(partygoerDialogueBox) partygoerDialogueBox.style.opacity = 1; // Ensure dialogue box is visible
+
+            // Reset clipboard button states and feedback styles
+            clipboardRulesList.querySelectorAll('li').forEach(li => {
+                li.classList.remove('feedback-correct', 'feedback-incorrect', 'feedback-show-actual');
+                const buttons = li.querySelectorAll('.assess-btn');
+                buttons.forEach(btn => {
+                    btn.classList.remove('selected', 'feedback-show-actual', 'followed', 'broken');
+                    btn.disabled = true; // Keep disabled until dialogue finishes
+                    // Re-attach listener (might be redundant, but safe)
+                    btn.removeEventListener('click', handleAssessmentButtonClick);
+                    btn.addEventListener('click', handleAssessmentButtonClick);
+                });
+                // Reset assessment state for this rule index
+                const ruleIndex = parseInt(li.dataset.ruleIndex, 10);
+                if (!isNaN(ruleIndex)) {
+                    ruleAssessments[ruleIndex] = null;
+                }
+            });
+
+            // Check if level quota is met
+            if (quotaMet >= quota) {
+                debugLog(`Quota met (${quotaMet}/${quota}). Level Complete.`);
+                levelComplete(); // Proceed to level completion / review screen
+                return;
+            }
+
+            // Select a random partygoer from the available pool in the active gameData
+            const partygoerPool = gameData.partygoers || [];
+            if (!partygoerPool || partygoerPool.length === 0) {
+                debugLog(`CRITICAL ERROR: No partygoers available in active dataset!`);
+                gameOver(`Erreur Système : Aucun invité défini !`); // Translated system error
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * partygoerPool.length);
+            currentPartygoer = partygoerPool[randomIndex];
+            // Determine if this partygoer *should* be admitted based on current rules
+            isPartygoerAcceptable = isPartygoerCompliant(currentPartygoer, currentRules);
+            debugLog(`Selected partygoer ID: ${currentPartygoer.id}. Compliant: ${isPartygoerAcceptable}`);
+
+            // --- Image Loading Logic ---
+            // Select a random image for the partygoer
+            const maxPartygoerImages = 17; // Number of available images (image01.png to image17.png)
+            const imageIndex = (Math.floor(Math.random() * maxPartygoerImages)) + 1; // Random index 1-17
+            const imageNumber = imageIndex.toString().padStart(2, '0'); // Format as 01, 02, ..., 17
+            if(partygoerElement) partygoerElement.style.backgroundImage = `url('images/image${imageNumber}.png')`; // Placeholder - Ensure path is correct
+            // debugLog(`Set partygoer image to: images/image${imageNumber}.png`);
+            // --- End Image Loading ---
+
+            // --- Generate Dialogue ---
+            // Construct the dialogue based on traits relevant to the current rules, plus some filler.
+            let dialogueSentences = [];
+            const partygoerTraits = currentPartygoer.traits;
+            const allTraitKeysFromGoer = Object.keys(partygoerTraits); // Use traits defined for this specific partygoer
+            let mentionedTraits = new Set(); // Keep track of traits already used in dialogue
+
+            // Identify traits directly mentioned in current rules (including exceptions)
+            let relevantTraitKeys = new Set();
+            currentRules.forEach(rule => {
+                 relevantTraitKeys.add(rule.trait);
+                 if (rule.isDouble && rule.exception) {
+                     relevantTraitKeys.add(rule.exception.trait);
+                 }
+            });
+            let relevantTraitArray = Array.from(relevantTraitKeys);
+            shuffleArray(relevantTraitArray);
+
+            // Add sentences for all relevant traits first
+            relevantTraitArray.forEach(traitName => {
+                addTraitSentence(traitName);
+            });
+
+            // Add filler sentences from other traits if needed (up to 5 total sentences)
+            const neededFiller = 5 - dialogueSentences.length;
+            if (neededFiller > 0) {
+                 // Use only traits this partygoer actually has, excluding already mentioned ones
+                let availableFillerTraits = allTraitKeysFromGoer.filter(t => !mentionedTraits.has(t) && partygoerTraits.hasOwnProperty(t));
+                shuffleArray(availableFillerTraits);
+                for (let i = 0; i < Math.min(neededFiller, availableFillerTraits.length); i++) {
+                    addTraitSentence(availableFillerTraits[i]);
+                }
+            }
+
+            // Helper to add a sentence for a trait if not already mentioned
+            function addTraitSentence(traitName) {
+                // Check if the partygoer has this trait defined AND it hasn't been mentioned
+                if (partygoerTraits.hasOwnProperty(traitName) && !mentionedTraits.has(traitName)) {
+                    const traitValue = partygoerTraits[traitName];
+                    dialogueSentences.push(getRandomTraitPhrase(traitName, traitValue));
+                    mentionedTraits.add(traitName);
+                    return true;
+                }
+                return false;
+            };
+
+            // Shuffle the final set of sentences and join with line breaks
+            dialogueSentences = shuffleArray(dialogueSentences);
+            // Add a generic greeting if no sentences were generated (should be rare)
+            if (dialogueSentences.length === 0) {
+                 dialogueSentences.push("Bonjour."); // "Hello." -> "Bonjour."
+            }
+            const finalDialogue = dialogueSentences.join("<br>");
+            debugLog(`Dialogue to type: "${finalDialogue.replace(/<br>/g, ' // ')}"`);
+
+            // Reset partygoer element's animation classes and position
+            if(partygoerElement) {
+                partygoerElement.classList.remove('animate-enter', 'animate-accept', 'animate-reject', 'flipped');
+                partygoerElement.style.left = '-250px'; // Start off-screen left
+                partygoerElement.style.opacity = '0'; // Start invisible
+                void partygoerElement.offsetWidth; // Force reflow to ensure animation restarts
+            }
+
+            // Start the partygoer entrance animation
+            debugLog("Triggering partygoer enter animation.");
+            gameActive = false; // Interaction disabled during animation/typing
+            processingDecision = true; // Mark as processing entrance animation
+            triggerAnimation(partygoerElement, 'animate-enter', () => {
+                debugLog("Partygoer enter animation finished.");
+                if(partygoerElement) partygoerElement.style.opacity = '1'; // Make visible after animation
+
+                // Start typewriter effect for dialogue
+                processingDecision = true; // Still processing during typewriter
+                typewriterEffect(partygoerSpeech, finalDialogue, () => {
+                     debugLog("Typewriter finished.");
+                     gameActive = true; // Enable player interaction ONLY AFTER typewriter finishes
+                     processingDecision = false; // Finished processing entrance & dialogue
+                     // Enable assessment buttons now that dialogue is complete
+                     clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = false);
+                     startTimer(); // Start the decision timer
+                     debugLog("Assessment interaction enabled and timer started.");
+                });
+            });
+        }
+
+        // --- Player Interaction Logic ---
+
+        /**
+         * Handles clicks on the rule assessment buttons (✅ / ❌) on the clipboard.
+         * @param {Event} event - The click event object.
+         */
+        function handleAssessmentButtonClick(event) {
+            // Ignore clicks if game is paused or processing a decision
+            if (processingDecision || isPaused) {
+                debugLog(`Assessment button click ignored (processing/paused)`);
+                return;
+            }
+            const clickedButton = event.target;
+            const ruleIndex = parseInt(clickedButton.dataset.ruleIndex, 10);
+            const assessment = clickedButton.dataset.assessment; // 'followed' or 'broken'
+
+            if (isNaN(ruleIndex) || !assessment) {
+                debugLog("Error: Invalid data on assessment button.");
+                return;
+            }
+
+            // Store the player's assessment
+            ruleAssessments[ruleIndex] = assessment;
+            debugLog(`Rule ${ruleIndex} assessed as: ${assessment}`);
+
+            // Update button visual state (selection) within the same rule row
+            const parentLi = clickedButton.closest('li');
+            if (parentLi) {
+                const buttonsInLi = parentLi.querySelectorAll('.assess-btn');
+                buttonsInLi.forEach(btn => {
+                    btn.classList.remove('selected'); // Deselect other button in the row
+                });
+                clickedButton.classList.add('selected'); // Select the clicked button
+            }
+
+            // Check if all rules are now assessed to enable Admit/Reject buttons
+            checkAllRulesAssessed();
+        }
+
+        /**
+         * Checks if all rules for the current partygoer have been assessed by the player.
+         * Enables or disables the Admit/Reject buttons accordingly.
+         * @returns {boolean} - True if all rules are assessed, false otherwise.
+         */
+        function checkAllRulesAssessed() {
+            const totalRules = currentRules.length;
+            let assessedCount = 0;
+            // Count how many rules have a non-null assessment
+            for (let i = 0; i < totalRules; i++) {
+                if (ruleAssessments[i] === 'followed' || ruleAssessments[i] === 'broken') {
+                    assessedCount++;
+                }
+            }
+            const allAssessed = assessedCount === totalRules;
+
+            // Enable Admit/Reject buttons only if all rules are assessed AND the game is not paused
+            // AND the main decision process isn't running (gameActive becomes true after typewriter)
+            if(admitButton) admitButton.disabled = !allAssessed || !gameActive || isPaused;
+            if(rejectButton) rejectButton.disabled = !allAssessed || !gameActive || isPaused;
+
+
+            if (allAssessed && gameActive && !isPaused) {
+                 // debugLog("All rules assessed. Admit/Reject enabled."); // Less noisy log
+            }
+            return allAssessed;
+        }
+
+        /**
+         * Handles the player's final decision (Admit or Reject).
+         * Compares player's decision and assessments against the actual compliance.
+         * Provides feedback, updates score/lives, and triggers next step (next partygoer or game over).
+         * @param {boolean} admitted - True if the player clicked Admit, false if Reject.
+         */
+        function handleDecision(admitted) {
+            // Ignore if game inactive, processing, timer stopped, or paused
+            if (!gameActive || processingDecision || !timerActive || isPaused) {
+                debugLog(`Decision ignored (inactive/processing/paused/no timer)`);
+                return;
+            }
+            // Ensure all rules were assessed before allowing a decision
+            if (!checkAllRulesAssessed()) {
+                debugLog("Decision attempt failed: Not all rules assessed.");
+                // Optionally provide feedback to the user here
+                return;
+            }
+
+            debugLog(`Handling decision: Player clicked ${admitted ? 'ADMIT' : 'REJECT'}.`);
+            stopTimer(); // Stop timer immediately
+            stopTypewriter(); // Stop dialogue typing
+            gameActive = false; // Disable further interaction
+            processingDecision = true; // Mark as processing
+
+            // Disable buttons during processing
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+
+            // Hide clipboard automatically
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+            // debugLog("Clipboard hidden automatically."); // Less noisy log
+
+            // --- Determine Correctness ---
+            let correctDecision = false;
+            let issue = ""; // Reason for incorrectness
+            let feedbackText = "";
+            let animationToPlay = admitted ? 'animate-accept' : 'animate-reject'; // Animation based on player choice
+
+            // Get the actual compliance status and individual rule statuses
+            const actualOverallCompliance = isPartygoerCompliant(currentPartygoer, currentRules);
+            const actualRuleStatuses = {}; // { ruleIndex: 'followed'/'broken' }
+            currentRules.forEach((rule, index) => {
+                actualRuleStatuses[index] = doesPartygoerViolateRule(currentPartygoer, rule) ? 'broken' : 'followed';
+            });
+
+            // Evaluate player's decision against actual compliance
+            if (admitted) { // Player clicked ADMIT
+                if (actualOverallCompliance) {
+                    // Correct Admit: Partygoer was compliant, player admitted.
+                    // Check if assessments were also correct (all marked followed).
+                    let allMarkedFollowed = true;
+                    for (let i = 0; i < currentRules.length; i++) {
+                        if (ruleAssessments[i] !== 'followed') {
+                            allMarkedFollowed = false; break;
+                        }
+                    }
+                    if (allMarkedFollowed) {
+                        correctDecision = true;
+                        feedbackText = "Correct ! Invité admis."; // Translated
+                        debugLog("Correct Admit!");
+                    } else {
+                        // Player admitted correctly, but marked a rule as broken incorrectly.
+                        correctDecision = false; // Penalize inaccurate assessment
+                        issue = "Incorrect Admit: Marked rule as broken.";
+                        feedbackText = `Décision Correcte (Admettre), mais Évaluation Incorrecte : Vous avez marqué une règle comme enfreinte alors que toutes étaient suivies.`; // Translated
+                        debugLog(issue + " (Admitted compliant guest but marked a rule broken)");
+                    }
+                } else {
+                    // Incorrect Admit: Partygoer was NOT compliant, player admitted.
+                    correctDecision = false;
+                    const violationIndices = Object.keys(actualRuleStatuses).filter(idx => actualRuleStatuses[idx] === 'broken');
+                    const violationTexts = violationIndices.map(index => `"${currentRules[index].displayText}"`).join(', ');
+                    issue = `Incorrect Admit: Partygoer violated rules: ${violationTexts}`;
+                    feedbackText = `Incorrect ! L'invité aurait dû être refusé. Il a enfreint les règles : ${violationTexts}`; // Translated
+                    debugLog(issue);
+                }
+            } else { // Player clicked REJECT
+                if (actualOverallCompliance) {
+                    // Incorrect Reject: Partygoer WAS compliant, player rejected.
+                    correctDecision = false;
+                    issue = "Incorrect Reject: Partygoer was compliant.";
+                    feedbackText = `Incorrect ! L'invité aurait dû être admis.`; // Translated
+                    debugLog(issue);
+                } else {
+                    // Correct Reject: Partygoer was NOT compliant, player rejected.
+                    // Now check if the player's *assessments* matched the actual violations.
+                    let assessmentMatches = true;
+                    let incorrectAssessmentsInfo = [];
+                    for (let i = 0; i < currentRules.length; i++) {
+                        if (ruleAssessments[i] !== actualRuleStatuses[i]) {
+                            assessmentMatches = false;
+                            // Describe the mismatch
+                            incorrectAssessmentsInfo.push(`Règle "${currentRules[i].displayText}" était ${actualRuleStatuses[i] === 'followed' ? 'suivie' : 'enfreinte'} (vous avez évalué ${ruleAssessments[i] === 'followed' ? 'suivie' : 'enfreinte'}).`); // Translated statuses
+                        }
+                    }
+
+                    if (assessmentMatches) {
+                        // Player rejected correctly AND assessments were accurate.
+                        correctDecision = true;
+                        feedbackText = "Correct ! Invité refusé."; // Translated
+                        debugLog("Correct Reject! All assessments matched.");
+                    } else {
+                        // Player rejected correctly, but assessments were inaccurate.
+                        correctDecision = false; // Penalize inaccurate assessment
+                        issue = "Incorrect Reject: Assessment inaccurate.";
+                        feedbackText = `Décision Correcte (Refuser), mais Évaluation Incorrecte : ${incorrectAssessmentsInfo.join(' ')}`; // Translated
+                        debugLog(issue + " Details: " + incorrectAssessmentsInfo.join('; '));
+                    }
+                }
+            }
+
+            // --- Display Feedback & Update State ---
+
+            // Display feedback message in the feedback box
+            if(feedbackBox) {
+                feedbackBox.innerHTML = `<span class='feedback-message ${correctDecision ? 'feedback-correct' : 'feedback-incorrect'}'>${feedbackText}</span>`;
+                feedbackBox.classList.add('visible');
+            }
+
+            // Provide visual feedback on clipboard assessment buttons if the decision or assessment was wrong
+             if (!correctDecision) {
+                 clipboardRulesList.querySelectorAll('li').forEach(li => {
+                    const ruleIndex = parseInt(li.dataset.ruleIndex, 10);
+                    if (isNaN(ruleIndex)) return;
+
+                    // Add class to row indicating if player's assessment for THIS rule was correct/incorrect
+                    li.classList.add(ruleAssessments[ruleIndex] === actualRuleStatuses[ruleIndex] ? 'feedback-correct' : 'feedback-incorrect');
+
+                    // Highlight the button corresponding to the *actual* status
+                    const buttons = li.querySelectorAll('.assess-btn');
+                    buttons.forEach(btn => {
+                        if (btn.dataset.assessment === actualRuleStatuses[ruleIndex]) {
+                            btn.classList.add('feedback-show-actual'); // Highlight the correct choice
+                        }
+                    });
+                 });
+                 // Briefly show the clipboard again to display the feedback
+                 clipboard.classList.add('active');
+                 gameContainer.classList.add('clipboard-active');
+                 // Hide it after a delay
+                 setTimeout(() => {
+                     clipboard.classList.remove('active');
+                     gameContainer.classList.remove('clipboard-active');
+                 }, 2500); // Show feedback for 2.5 seconds
+            }
+
+            // Apply score/lives changes
+            if (correctDecision) {
+                score++;
+                quotaMet++;
+            } else {
+                lives--;
+                debugLog(`Lost a life. Reason: ${issue || 'Incorrect Decision/Assessment'}. Lives left: ${lives}`);
+            }
+            updateUI(); // Update score/lives display
+
+            // Check for game over condition
+            if (lives <= 0) {
+                debugLog("Game Over triggered by incorrect decision.");
+                // Delay game over slightly to allow player to read feedback
+                setTimeout(() => {
+                    triggerAnimation(partygoerElement, animationToPlay, () => gameOver(issue || `Vous n'avez plus de vies au Niveau ${currentLevel}.`)); // Translated reason
+                }, 1500); // Delay after feedback appears
+                return; // Stop further processing
+            }
+
+            // --- Proceed to Next Step ---
+            // Trigger the appropriate animation (accept/reject) for the partygoer
+            debugLog(`Triggering animation: ${animationToPlay}`);
+            // Add a delay before starting the animation to allow feedback reading
+            setTimeout(() => {
+                triggerAnimation(partygoerElement, animationToPlay, () => {
+                    debugLog(`Animation ${animationToPlay} finished.`);
+                    // After animation, check quota again (in case this was the last needed)
+                    if (quotaMet >= quota) {
+                        debugLog("Quota met post-animation.");
+                        levelComplete(); // Go to level complete / review
+                    } else {
+                        debugLog("Loading next partygoer.");
+                        loadNextPartygoer(); // Load the next challenge
+                    }
+                });
+            }, 1200); // Delay matches feedback display time if clipboard wasn't shown
+        }
+
+        /**
+         * Triggers a CSS animation on an element and executes a callback on completion.
+         * @param {HTMLElement} element - The element to animate.
+         * @param {string} animationClass - The CSS class containing the @keyframes animation name.
+         * @param {function} [callback] - Optional function to call when the animation ends.
+         */
+        function triggerAnimation(element, animationClass, callback) {
+            if (!element) {
+                debugLog(`Error: Element not found for animation '${animationClass}'.`);
+                if(callback) callback();
+                return;
+            }
+            // debugLog(`Triggering animation '${animationClass}' on #${element.id}`); // Less noisy log
+
+            // Define the listener function to handle animation end
+            const listener = (event) => {
+                // Ensure the event is from the target element, not a child
+                if (event.target !== element) return;
+                // debugLog(`Animation '${animationClass}' ended for #${element.id}.`); // Less noisy log
+                element.removeEventListener('animationend', listener); // Clean up listener
+                // Execute callback if provided
+                if (callback) {
+                    // debugLog(`Executing callback for ${animationClass}.`); // Less noisy log
+                    callback();
+                }
+            };
+
+            // Add the event listener *before* adding the class
+            element.addEventListener('animationend', listener, { once: true });
+
+            // Prepare element for animation
+            // Remove existing animation classes first
+            element.classList.remove('animate-enter', 'animate-accept', 'animate-reject', 'flipped');
+            // Ensure element is visible (unless it's the enter animation)
+            if (animationClass !== 'animate-enter') {
+                element.style.opacity = '1';
+            }
+            // Apply flip specifically for reject animation
+            if (animationClass === 'animate-reject') {
+                element.classList.add('flipped');
+                // debugLog("Applied 'flipped' class for reject animation."); // Less noisy log
+            }
+            // Force reflow to ensure animation restarts if class was recently removed
+            void element.offsetWidth;
+            // Add the animation class to start the animation
+            element.classList.add(animationClass);
+            // debugLog(`Class '${animationClass}' added.`); // Less noisy log
+        }
+
+        // --- Level Progression & End States ---
+
+        /**
+         * Handles the level completion sequence. Shows intermediate screen then sets up review.
+         */
+        function levelComplete() {
+            debugLog("Level Complete called.");
+            stopTimer();
+            stopTypewriter();
+            gameActive = false;
+            processingDecision = true; // Mark as processing transition
+
+            // Update and show the intermediate "Level Complete" screen briefly
+            if(levelCompleteScoreDisplay) levelCompleteScoreDisplay.textContent = `Points du Niveau : ${quotaMet}/${quota}`; // Translated
+            if(levelCompleteMessage) levelCompleteMessage.textContent = `Objectif atteint ! Préparation du bilan...`; // Translated
+            switchScreen(levelCompleteScreen);
+
+            // After a short delay, proceed to the review screen setup
+            setTimeout(() => {
+                setupReviewScreen();
+            }, 1500); // Show level complete message for 1.5 seconds
+        }
+
+        /**
+         * Sets up and displays the Review Screen with a practice challenge.
+         */
+        function setupReviewScreen() {
+             debugLog("Setting up Review Screen.");
+             // Set initial review message from the representative
+             if(reviewInitialMessage) reviewInitialMessage.textContent = "Bon travail pour ce service. Revoyons quelque chose rapidement..."; // Translated
+
+             // Ensure the representative character image is set on the review screen
+             if(representativeReviewChar) representativeReviewChar.style.backgroundImage = `url('images/representative.png')`; // Placeholder - Ensure path is correct
+
+             // --- Select and Display Challenge ---
+             currentChallenge = null; // Reset current challenge
+             const availableChallenges = gameData.practiceItems || []; // Use active gameData
+
+             if (availableChallenges.length > 0) {
+                 // Try to find challenges related to the rules of the *just completed* level
+                 const relatedTraits = currentRules.map(r => r.trait); // Get traits from the level's rules
+                 let potentialChallenges = availableChallenges.filter(item =>
+                     item.related_trait && relatedTraits.includes(item.related_trait)
+                 );
+
+                 if (potentialChallenges.length > 0) {
+                     // Pick a random challenge from the related ones
+                     debugLog(`Found ${potentialChallenges.length} challenges related to level ${currentLevel} rules.`);
+                     const challengeIndex = Math.floor(Math.random() * potentialChallenges.length);
+                     currentChallenge = potentialChallenges[challengeIndex];
+                 } else {
+                     // If no related challenges found, pick any challenge randomly
+                     debugLog("No related challenges found, picking randomly from all practice items.");
+                     const challengeIndex = Math.floor(Math.random() * availableChallenges.length);
+                     currentChallenge = availableChallenges[challengeIndex];
+                 }
+
+                 debugLog(`Selected challenge: ${JSON.stringify(currentChallenge)}`);
+
+                 // Display the challenge prompt and reset input/feedback
+                 if(reviewChallengePrompt) reviewChallengePrompt.textContent = currentChallenge.prompt;
+                 if(reviewChallengeInput) {
+                     reviewChallengeInput.value = '';
+                     reviewChallengeInput.disabled = false;
+                     reviewChallengeInput.classList.remove('correct', 'incorrect'); // Clear validation styles
+                 }
+                 if(reviewChallengeFeedback) {
+                     reviewChallengeFeedback.textContent = '';
+                     reviewChallengeFeedback.className = ''; // Clear feedback styles
+                 }
+                 if(reviewChallengeSubmitButton) reviewChallengeSubmitButton.disabled = false;
+
+                 // Show the challenge container and hide the continue button
+                 if(reviewChallengeContainer) reviewChallengeContainer.style.display = 'block';
+                 if(continueNextLevelButton) continueNextLevelButton.style.display = 'none';
+
+             } else {
+                 // No practice items available in the dataset
+                 debugLog("No practice items found for review challenge.");
+                 if(reviewChallengeContainer) reviewChallengeContainer.style.display = 'none'; // Hide challenge area
+                 if(reviewInitialMessage) reviewInitialMessage.textContent = "Bon travail ! Tout semble en ordre pour le moment. Vous pouvez continuer."; // Translated adjusted message
+                 if(continueNextLevelButton) continueNextLevelButton.style.display = 'block'; // Show continue button immediately
+             }
+
+             // Finally, switch to the review screen
+             switchScreen(reviewScreen);
+             processingDecision = false; // Finished setting up review
+        }
+
+        /**
+         * Handles the submission of the answer on the Review Screen challenge.
+         * Provides feedback and shows the continue button.
+         */
+        function handleReviewChallengeSubmit() {
+            if (!currentChallenge || !reviewChallengeInput || !reviewChallengeFeedback || !reviewChallengeSubmitButton || !continueNextLevelButton) {
+                 debugLog("Error: Missing elements for review challenge submission.");
+                 return;
+            }
+            const playerAnswer = reviewChallengeInput.value.trim().toLowerCase();
+            const correctAnswer = currentChallenge.answer.toLowerCase();
+            debugLog(`Review Challenge submitted. Player: "${playerAnswer}", Correct: "${correctAnswer}"`);
+
+            // Disable input and button after submission
+            reviewChallengeSubmitButton.disabled = true;
+            reviewChallengeInput.disabled = true;
+
+            if (playerAnswer === correctAnswer) {
+                // Correct Answer
+                reviewChallengeFeedback.textContent = "Correct !"; // Translated
+                reviewChallengeFeedback.className = 'feedback-correct'; // Add class for styling
+                reviewChallengeInput.classList.add('correct'); // Style input border
+                debugLog("Review Challenge correct.");
+                // Show continue button after a short delay
+                setTimeout(() => { continueNextLevelButton.style.display = 'block'; }, 1000);
+            } else {
+                // Incorrect Answer
+                let feedbackText = `Incorrect. La bonne réponse est : "${currentChallenge.answer}".`; // Translated
+                // Add specific feedback if available in the data
+                if (currentChallenge.feedback_if_wrong) {
+                    feedbackText += ` (${currentChallenge.feedback_if_wrong})`;
+                }
+                reviewChallengeFeedback.textContent = feedbackText;
+                reviewChallengeFeedback.className = 'feedback-incorrect'; // Add class for styling
+                reviewChallengeInput.classList.add('incorrect'); // Style input border
+                debugLog("Review Challenge incorrect.");
+                // Show continue button after a longer delay for reading feedback
+                setTimeout(() => { continueNextLevelButton.style.display = 'block'; }, 2500);
+            }
+            // Clear the challenge reference once handled
+            currentChallenge = null;
+        }
+
+        /**
+         * Proceeds to the next level.
+         */
+        function nextLevel() {
+            debugLog("Next Level button clicked.");
+            currentLevel++;
+            setupLevel(currentLevel); // Setup the next level
+        }
+
+        /**
+         * Handles the game over state.
+         * Displays the final score and reason, shows the game over screen.
+         * @param {string} [reason="Vous n'avez plus de vies !"] - The reason for the game over. Translated default
+         */
+        function gameOver(reason = "Vous n'avez plus de vies !") { // Default reason in French
+            debugLog("Game Over called.");
+            stopTimer();
+            stopTypewriter();
+            gameActive = false;
+            processingDecision = true; // Mark as processing game over transition
+
+            // Update game over screen content
+            if(gameOverScoreDisplay) gameOverScoreDisplay.textContent = `Score Final : ${score}`; // Translated
+            if(gameOverReason) gameOverReason.textContent = reason; // Display the reason
+
+            // Switch to the game over screen
+            switchScreen(gameOverScreen);
+            processingDecision = false; // Finished game over transition
+        }
+
+        /**
+         * Resets the game state to initial values and returns to the title screen.
+         */
+        function restartGame() {
+            debugLog("Restart Game button clicked.");
+            // Reset game state variables
+            lives = STARTING_LIVES;
+            score = 0;
+            quotaMet = 0;
+            currentLevel = 1; // Start back at level 1
+            currentPartygoer = null;
+            currentRules = [];
+            ruleAssessments = {};
+            currentChallenge = null;
+            customDataImported = false; // Clear custom data flag
+            isPaused = false; // Ensure not paused
+
+            // Stop any ongoing processes
+            resetTimer();
+            stopTypewriter();
+             // Clear any pending clipboard hide timeouts
+             clearTimeout(triggerHideTimeout);
+             clearTimeout(clipboardHideTimeout);
+             triggerHideTimeout = null;
+             clipboardHideTimeout = null;
+
+
+            debugLog("Game state reset.");
+            switchScreen(titleScreen); // Go back to title
+
+            // Reset title screen elements
+            if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = true; // Default to using example data
+            if(importTextarea) importTextarea.value = ''; // Clear import text
+            if(importFeedback) {
+                 importFeedback.textContent = ''; // Clear import feedback
+                 importFeedback.className = '';
+            }
+            updateStartButtonState(); // Update start button based on reset state
+        }
+
+        // --- Pause/Resume Functions ---
+
+        /**
+         * Pauses the game. Stops timer, typewriter, and disables interactions.
+         */
+        function pauseGame() {
+            // Can only pause during active gameplay when not already paused
+            if (isPaused || !gameplayScreen.classList.contains('active')) { // Allow pausing even if typewriter is running
+                 debugLog("Pause ignored (already paused or not on gameplay screen).");
+                 return;
+            }
+            isPaused = true;
+            stopTimer(); // Stop the game timer
+            // Don't stop typewriter, let it finish visually if desired, but pause logic will prevent updates
+            debugLog("Game Paused.");
+
+            // Disable interactions that shouldn't work while paused
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+            clipboard.classList.remove('active'); // Hide clipboard if open
+            gameContainer.classList.remove('clipboard-active');
+
+             // Clear any pending hide timeouts when pausing
+             clearTimeout(triggerHideTimeout);
+             clearTimeout(clipboardHideTimeout);
+             triggerHideTimeout = null;
+             clipboardHideTimeout = null;
+
+
+            // Show pause overlay and hide the pause button itself
+            if(pauseOverlay) pauseOverlay.style.display = 'flex';
+            if(pauseButton) pauseButton.style.display = 'none';
+        }
+
+        /**
+         * Resumes the game from a paused state.
+         */
+        function resumeGame() {
+            if (!isPaused || !gameplayScreen.classList.contains('active')) {
+                 debugLog("Resume ignored (not paused or not on gameplay screen).");
+                 return; // Can only resume if paused
+            }
+            isPaused = false;
+            // Only restart timer if it was active before pausing (i.e., after typewriter)
+            if (timerActive || timeLeft < TIMER_DURATION) {
+                 startTimer();
+            }
+            debugLog("Game Resumed.");
+
+            // Re-enable interactions
+            // Assessment buttons are re-enabled (if they were enabled before pause)
+            if (!processingDecision) { // Only enable if not currently processing anim/typewriter
+                 clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = false);
+            }
+            // Admit/Reject buttons are re-enabled *only if* all rules were assessed AND game is active
+            checkAllRulesAssessed();
+
+            // Hide pause overlay and show the pause button again
+            if(pauseOverlay) pauseOverlay.style.display = 'none';
+            if(pauseButton) pauseButton.style.display = 'inline-block'; // Or 'block' depending on original style
+        }
+
+        // --- Data Import Logic (Replaced with Backup Version + Modifications) ---
+
+        /**
+         * Parses data from the import textarea and loads it as custom game data if valid.
+         * This version REPLACES existing data.
+         */
+        function importSimpleData() {
+            const code = importTextarea.value;
+            if(importFeedback) {
+                importFeedback.textContent = ''; // Clear previous feedback
+                importFeedback.className = '';
+            }
+            debugLog("IMPORT: Button clicked.");
+
+            if (!code) {
+                if(importFeedback) {
+                    importFeedback.textContent = "Rien à importer. Collez les données dans la zone de texte."; // Translated
+                    importFeedback.className = 'error';
+                }
+                debugLog("IMPORT: Aborted - No code provided.");
+                return;
+            }
+
+            // --- Parsing Logic ---
+            // Store imported data temporarily
+            let importedData = { rules: [], phrases: {}, partygoers: [], partygoerIDs: new Set(), practiceItems: [] };
+            let tempKnownTraits = new Set(); // Track traits found *during this import*
+            const lines = code.split('\n');
+            let rulesAdded = 0, phrasesAdded = 0, partygoersAdded = 0, practiceAdded = 0;
+            let errors = []; // Collect error messages
+
+            lines.forEach((line, index) => {
+                line = line.trim();
+                // Skip empty lines and comments
+                if (!line || line.startsWith('#') || line.startsWith('//')) {
+                    return;
+                }
+
+                const parts = line.split('|').map(p => p.trim());
+                const type = parts[0]?.toUpperCase();
+                const data = parts.slice(1);
+                const lineNumber = index + 1;
+
+                try {
+                    if (type === 'RULE') {
+                        let rule = {};
+                        if (data.length < 3) throw new Error(`Règle nécessite format : trait | TRUE/FALSE | texte [| exception_trait | TRUE/FALSE | override_text]`); // Translated
+                        rule.trait = data[0];
+                        if (!rule.trait) throw new Error("Le trait de la règle ne peut pas être vide."); // Translated
+                        if (data[1].toUpperCase() !== 'TRUE' && data[1].toUpperCase() !== 'FALSE') throw new Error(`La condition de la règle doit être TRUE ou FALSE, pas '${data[1]}'.`); // Translated
+                        rule.condition = data[1].toUpperCase() === 'TRUE';
+                        rule.text = data[2];
+                        if (!rule.text) throw new Error("Le texte de la règle ne peut pas être vide."); // Translated
+                        tempKnownTraits.add(rule.trait); // Track trait
+
+                        if (data.length >= 5) { // Complex rule check
+                            rule.isDouble = true;
+                            const exception_trait = data[3];
+                            if (!exception_trait) throw new Error("Le trait d'exception ne peut pas être vide pour une règle complexe."); // Translated
+                            const exception_condition_str = data[4].toUpperCase();
+                            if (exception_condition_str !== 'TRUE' && exception_condition_str !== 'FALSE') {
+                                throw new Error(`La condition d'exception doit être TRUE ou FALSE, pas '${data[4]}'.`); // Translated
+                            }
+                            rule.exception = { trait: exception_trait, condition: exception_condition_str === 'TRUE' };
+                            tempKnownTraits.add(rule.exception.trait); // Track exception trait
+                            if (data.length >= 6 && data[5]) rule.text_override = data[5];
+                        } else {
+                             rule.isDouble = false;
+                        }
+                        importedData.rules.push(rule);
+                        rulesAdded++;
+                    } else if (type === 'PHRASE') {
+                        if (data.length !== 3) throw new Error("Phrase nécessite format : trait | TRUE/FALSE | texte"); // Translated
+                        const trait = data[0]; const stateStr = data[1].toUpperCase(); const text = data[2];
+                        if (!trait) throw new Error("Le trait de la phrase ne peut pas être vide."); // Translated
+                        if (stateStr !== 'TRUE' && stateStr !== 'FALSE') throw new Error(`L'état de la phrase doit être TRUE ou FALSE, pas '${data[1]}'.`); // Translated
+                        if (!text) throw new Error("Le texte de la phrase ne peut pas être vide."); // Translated
+                        const stateKey = (stateStr === 'TRUE') ? 'true' : 'false';
+                        if (!importedData.phrases[trait]) importedData.phrases[trait] = { true: [], false: [] };
+                        importedData.phrases[trait][stateKey].push(text); // Allow duplicate phrases if user wants
+                        phrasesAdded++;
+                        tempKnownTraits.add(trait);
+                    } else if (type === 'PARTYGOER') {
+                        if (data.length < 1 || !data[0]) throw new Error("Invité nécessite format : id [| trait1=T/F | trait2=T/F ...]"); // Translated
+                        const id = data[0];
+                        if (importedData.partygoerIDs.has(id)) throw new Error(`ID d'invité dupliqué : ${id}`); // Translated
+                        let newTraits = {};
+                        const traitPairs = data.slice(1);
+                        traitPairs.forEach(pair => {
+                            const kv = pair.split('=').map(p => p.trim());
+                            if (kv.length !== 2 || !kv[0]) throw new Error(`Format de trait invalide pour l'invité ${id}: "${pair}". Utiliser trait=T ou trait=F.`); // Translated
+                            const traitName = kv[0]; const traitValueStr = kv[1].toUpperCase();
+                            if (traitValueStr !== 'T' && traitValueStr !== 'F') throw new Error(`Valeur de trait invalide pour ${traitName} chez l'invité ${id}: "${kv[1]}". Utiliser T ou F.`); // Translated
+                            newTraits[traitName] = (traitValueStr === 'T');
+                            tempKnownTraits.add(traitName); // Track trait
+                        });
+                        importedData.partygoers.push({ id: id, traits: newTraits });
+                        importedData.partygoerIDs.add(id);
+                        partygoersAdded++;
+                    } else if (type === 'PRACTICE') {
+                        if (data.length < 3 || data.length > 5) throw new Error("Exercice nécessite format : type | question | réponse [| feedback_si_erreur | related_trait]"); // Translated
+                        const practiceType = data[0].toLowerCase(); const prompt = data[1]; const answer = data[2];
+                        const feedback = data[3] || null; const related_trait = data[4] || null;
+                        if (!practiceType || !prompt || !answer) throw new Error("Type, question et réponse de l'exercice sont requis."); // Translated
+                        importedData.practiceItems.push({ type: practiceType, prompt, answer, feedback_if_wrong: feedback, related_trait: related_trait });
+                        practiceAdded++;
+                    } else {
+                        throw new Error(`Type de ligne inconnu : "${type}". Utiliser RULE, PHRASE, PARTYGOER, ou PRACTICE.`); // Translated
+                    }
+                } catch (error) {
+                    errors.push(`Ligne ${lineNumber}: ${error.message}`);
+                    debugLog(`IMPORT ERROR en ligne ${lineNumber}: ${line} - ${error.message}`);
+                }
+            }); // End forEach line
+
+            // --- Apply Data or Show Errors ---
+            if (errors.length === 0 && (rulesAdded > 0 && partygoersAdded > 0)) { // NOW require rules AND partygoers
+                // Import successful! Data looks structurally valid and has core components.
+
+                // **REPLACE** the main gameData object
+                gameData = importedData;
+                allKnownTraitKeys = tempKnownTraits; // Update the global trait list
+
+                // Ensure all partygoers have defaults for *all* known traits from the import
+                gameData.partygoers.forEach(pg => {
+                    allKnownTraitKeys.forEach(trait => {
+                        if (!(trait in pg.traits)) {
+                            pg.traits[trait] = false; // Default missing to false
+                        }
+                    });
+                });
+
+                customDataImported = true; // Mark successful import
+                currentGameMode = 'custom'; // Set mode
+                if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = false; // Uncheck default box
+                if(importFeedback) {
+                    importFeedback.textContent = `Importation réussie ! Ajouté : ${rulesAdded} Règles, ${phrasesAdded} Phrases, ${partygoersAdded} Invités, ${practiceAdded} Exercices.`; // Translated summary
+                    importFeedback.className = 'success';
+                }
+                debugLog("Custom data successfully imported and applied.");
+                if (enableDebug) console.log("Loaded Custom Game Data:", JSON.stringify(gameData, null, 2));
+
+            } else {
+                // Import failed or resulted in missing core data (rules or partygoers)
+                customDataImported = false; // Ensure flag is false
+                if (errors.length > 0) {
+                    const errorMsg = `Importation échouée avec ${errors.length} ${errors.length === 1 ? 'erreur' : 'erreurs'}:\n- ${errors.slice(0, 3).join('\n- ')}${errors.length > 3 ? '\n(...et plus)' : ''}`; // Translated
+                    if(importFeedback) {
+                        importFeedback.textContent = errorMsg;
+                        importFeedback.className = 'error';
+                    }
+                    debugLog(`Import failed with errors: ${errors.join('; ')}`);
+                } else {
+                    if(importFeedback) {
+                        importFeedback.textContent = `Importation échouée. Des lignes RULE et PARTYGOER valides sont requises.`; // Translated
+                        importFeedback.className = 'error';
+                    }
+                    debugLog("Import finished, but no valid rules or partygoers were added.");
+                }
+                 // Ensure we revert to default data if import fails or is incomplete
+                 loadDataSet(true); // Use the function to load default and reset state
+            }
+            // Update start button state after import attempt
+            updateStartButtonState();
+        }
+
+
+        /**
+         * Updates the enabled/disabled state of the "Start Game" button
+         * based on whether custom data is loaded or the default checkbox is checked.
+         */
+        function updateStartButtonState() {
+            if (!startGameButton || !useDefaultSetCheckbox) {
+                 debugLog("Error: Start button or checkbox not found during updateStartButtonState");
+                 return;
+            }
+            const useDefault = useDefaultSetCheckbox.checked;
+            // Enable start if custom data is successfully imported OR if the default checkbox is checked
+            const canStart = customDataImported || useDefault;
+            startGameButton.disabled = !canStart;
+
+            // If default is checked by the user, ensure custom flag is off and potentially load default data
+            if (useDefault) {
+                 if (customDataImported) { // If switching back to default from custom
+                     customDataImported = false;
+                     loadDataSet(true); // Explicitly reload default data
+                     debugLog("Switched back to using default data set.");
+                 }
+                 // Clear feedback if user re-checks default after a failed/successful import
+                 if (importFeedback && (importFeedback.className === 'error' || importFeedback.className === 'success')) {
+                     importFeedback.textContent = '';
+                     importFeedback.className = '';
+                 }
+            }
+            // If custom data is active, ensure the checkbox reflects this (is unchecked)
+            else if (customDataImported) {
+                 useDefaultSetCheckbox.checked = false;
+            }
+
+            // debugLog(`Start button state updated. Use Default: ${useDefault}, Custom Imported: ${customDataImported}, Can Start: ${canStart}, Button Disabled: ${startGameButton.disabled}`);
+        }
+
+        // --- Event Listeners ---
+        debugLog("Setting up event listeners.");
+
+        // Title Screen Buttons
+        if (startGameButton) {
+            startGameButton.addEventListener('click', () => {
+                debugLog("Start Game button clicked.");
+                // Data should already be loaded by checkbox change or import button.
+                // Just need to verify it's usable.
+                if (!gameData || !gameData.rules || gameData.rules.length === 0 || !gameData.partygoers || gameData.partygoers.length === 0) {
+                    if(importFeedback) {
+                        importFeedback.textContent = "Erreur : Impossible de démarrer sans règles ou invités valides dans l'ensemble de données actif."; // Translated
+                        importFeedback.className = 'error';
+                    }
+                    debugLog("Start game aborted: Empty rules or partygoers in active dataset.");
+                    startGameButton.disabled = true; // Keep disabled
+                } else {
+                    // Data looks okay, start level 1
+                    setupLevel(1);
+                }
+            });
+        } else debugLog("ERROR: startGameButton not found");
+
+        if (howToPlayButton) {
+            howToPlayButton.addEventListener('click', () => {
+                if(howToPlayOverlay) howToPlayOverlay.classList.add('active');
+            });
+        } else debugLog("ERROR: howToPlayButton not found");
+
+        if (closeHowToPlayButton) {
+            closeHowToPlayButton.addEventListener('click', () => {
+                if(howToPlayOverlay) howToPlayOverlay.classList.remove('active');
+            });
+        } else debugLog("ERROR: closeHowToPlayButton not found");
+
+        // Data Import Listeners
+        if (importDataButton) {
+            importDataButton.addEventListener('click', importSimpleData); // Use the new import function
+        } else debugLog("ERROR: importDataButton not found");
+
+        if (useDefaultSetCheckbox) {
+            // When checkbox changes, update the start button state and potentially load default data
+            useDefaultSetCheckbox.addEventListener('change', updateStartButtonState);
+        } else debugLog("ERROR: use-default-set-checkbox not found");
+
+        // Briefing Screen Button
+        if (startShiftButton) {
+            startShiftButton.addEventListener('click', startShift);
+        } else debugLog("ERROR: startShiftButton not found");
+
+        // Gameplay Buttons & Interactions
+        if (admitButton) {
+            admitButton.addEventListener('click', () => handleDecision(true));
+        } else debugLog("ERROR: clipboard-admit-button not found");
+
+        if (rejectButton) {
+            rejectButton.addEventListener('click', () => handleDecision(false));
+        } else debugLog("ERROR: clipboard-reject-button not found");
+
+        // --- Clipboard Show/Hide Logic (using timeouts) ---
+        if (clipboardTrigger && clipboard && gameContainer) {
+            clipboardTrigger.addEventListener('mouseenter', () => {
+                // Allow showing if on gameplay screen and not paused
+                if (gameplayScreen.classList.contains('active') && !isPaused) {
+                    clearTimeout(clipboardHideTimeout); // Cancel hiding if mouse re-enters trigger quickly
+                    clipboardHideTimeout = null;
+                    clipboard.classList.add('active');
+                    gameContainer.classList.add('clipboard-active');
+                }
+            });
+
+            clipboardTrigger.addEventListener('mouseleave', () => {
+                 // If a hide timeout isn't already running, start one
+                 if (!triggerHideTimeout) {
+                    triggerHideTimeout = setTimeout(() => {
+                        clipboard.classList.remove('active');
+                        gameContainer.classList.remove('clipboard-active');
+                        triggerHideTimeout = null; // Clear the timeout ID
+                    }, CLIPBOARD_HIDE_DELAY);
+                 }
+            });
+
+            clipboard.addEventListener('mouseenter', () => {
+                // When mouse enters the clipboard itself, cancel the trigger's hide timeout
+                clearTimeout(triggerHideTimeout);
+                triggerHideTimeout = null;
+                 // Ensure clipboard stays visible (in case timeout fired unexpectedly)
+                 // Allow showing if on gameplay screen and not paused
+                 if (gameplayScreen.classList.contains('active') && !isPaused) {
+                     clipboard.classList.add('active');
+                     gameContainer.classList.add('clipboard-active');
+                 }
+            });
+
+            clipboard.addEventListener('mouseleave', () => {
+                // When mouse leaves the clipboard, start a timeout to hide it
+                 if (!clipboardHideTimeout) {
+                    clipboardHideTimeout = setTimeout(() => {
+                        clipboard.classList.remove('active');
+                        gameContainer.classList.remove('clipboard-active');
+                        clipboardHideTimeout = null; // Clear the timeout ID
+                    }, CLIPBOARD_HIDE_DELAY);
+                 }
+            });
+        } else {
+            debugLog("ERROR: clipboardTrigger or clipboard element not found for event listeners.");
+        }
+        // --- End Clipboard Show/Hide Logic ---
+
+
+        // Pause/Resume Buttons
+        if (pauseButton) {
+            pauseButton.addEventListener('click', pauseGame);
+        } else debugLog("ERROR: pause-button not found");
+
+        if (resumeButton) {
+            resumeButton.addEventListener('click', resumeGame);
+        } else debugLog("ERROR: resume-button not found");
+
+        // Review Screen Buttons
+        if (reviewChallengeSubmitButton) {
+            reviewChallengeSubmitButton.addEventListener('click', handleReviewChallengeSubmit);
+        } else debugLog("ERROR: review-challenge-submit-button not found");
+
+        if (reviewChallengeInput) {
+            // Allow submitting challenge with Enter key
+            reviewChallengeInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter' && !reviewChallengeSubmitButton.disabled) {
+                    handleReviewChallengeSubmit();
+                }
+            });
+        } else debugLog("ERROR: review-challenge-input not found");
+
+        if (continueNextLevelButton) {
+            continueNextLevelButton.addEventListener('click', nextLevel);
+        } else debugLog("ERROR: continue-next-level-button not found");
+
+        // Game Over Screen Button
+        if (restartButtonGameOver) {
+            restartButtonGameOver.addEventListener('click', restartGame);
+        } else debugLog("ERROR: restartButtonGameOver not found");
+
+        debugLog("Event listeners attached checks complete.");
+
+        // --- Game Initialization ---
+        debugLog("Starting game initialization.");
+        // Use DOMContentLoaded to ensure all HTML is parsed before running setup
+        document.addEventListener('DOMContentLoaded', () => {
+             debugLog("DOM loaded. Initializing game state.");
+
+             // Store default data sets (already defined above)
+             // Initialize active gameData with the default set initially
+             loadDataSet(true); // Start with default data loaded
+
+             customDataImported = false; // No import yet
+             if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = true; // Check the box by default
+             updateStartButtonState(); // Set initial button state based on default checkbox
+             switchScreen(titleScreen); // Show the title screen first
+             debugLog("Initial setup complete. Showing Title Screen.");
+         });
+
+    </script>
+    </body>
+</html>

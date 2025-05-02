@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scatenafesta!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #070707;
+            color: #ecf0f1;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .game-container {
+            width: 1000px;
+            height: 900px;
+            border: 3px solid #7f8c8d;
+            background-color: #1A1A1A;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            transform: scale(0.85);
+            transform-origin: top center;
+            margin-top: 20px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .character {
+            width: 180px;
+            height: 360px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            position: absolute;
+            bottom: 80px;
+            transition: transform 0.5s ease, left 1s ease-in-out, opacity 0.5s ease;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.4));
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .flipped {
+            transform: scaleX(-1);
+            filter: drop-shadow(-5px 5px 5px rgba(0,0,0,0.4));
+        }
+
+        .dialogue-container {
+            position: absolute;
+            bottom: 400px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .dialogue-box {
+            background: linear-gradient(to bottom, #ecf0f1, #bdc3c7);
+            color: #2c3e50;
+            border: 3px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            font-size: 0.95em;
+            line-height: 1.6;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            min-height: 60px;
+            width: 100%;
+            position: relative;
+        }
+
+        .dialogue-box::before {
+            content: '';
+            position: absolute;
+            bottom: -24px;
+            left: 25%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-width: 13px;
+            border-style: solid;
+            border-color: #bdc3c7 transparent transparent transparent;
+            z-index: 1;
+        }
+
+        #feedback-box {
+            background-color: rgba(44, 62, 80, 0.85);
+            color: #ecf0f1;
+            border: 1px solid #7f8c8d;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-align: center;
+            width: fit-content;
+            max-width: 90%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            min-height: 1.5em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            margin-top: 10px;
+        }
+
+        #feedback-box.visible {
+            opacity: 1;
+        }
+
+        button {
+            font-family: 'Roboto', sans-serif;
+            padding: 15px 30px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            margin: 15px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        button:hover:not(:disabled){
+            transform: translateY(-2px);
+            box-shadow: 0 5px 7px rgba(0,0,0,0.4);
+        }
+
+        button:active:not(:disabled){
+            transform: translateY(1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background-color: #7f8c8d !important;
+            color: #bdc3c7;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        #start-shift-button, #next-level-button, #restart-button-gameover, #start-game-button, #how-to-play-button, #import-data-button, #review-challenge-submit-button, #continue-next-level-button, #resume-button {
+            background-color: #2980b9;
+        }
+        #start-shift-button:hover:not(:disabled), #next-level-button:hover:not(:disabled), #restart-button-gameover:hover:not(:disabled), #start-game-button:hover:not(:disabled), #how-to-play-button:hover:not(:disabled), #import-data-button:hover:not(:disabled), #review-challenge-submit-button:hover:not(:disabled), #continue-next-level-button:hover:not(:disabled), #resume-button:hover:not(:disabled) {
+            background-color: #3498db;
+        }
+
+        #pause-button {
+            background-color: #f39c12;
+            padding: 5px 12px;
+            font-size: 0.9em;
+            min-width: 80px;
+            margin: 0 10px;
+        }
+        #pause-button:hover:not(:disabled) {
+            background-color: #f1c40f;
+        }
+
+        #pause-overlay #resume-button {
+            padding: 15px 30px;
+            font-size: 1em;
+            margin-top: 20px;
+        }
+
+        .ui-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: fit-content;
+            background-color: rgba(44, 62, 80, 0.85);
+            color: #ecf0f1;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-size: 1em;
+            border: 1px solid #7f8c8d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 60;
+            display: flex;
+            align-items: center;
+        }
+
+        .ui-bar span {
+            margin: 0 12px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .hearts {
+            color: #e74c3c;
+            letter-spacing: 4px;
+            font-size: 1.2em;
+            vertical-align: middle;
+        }
+
+        #timer-bar-container {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 15px;
+            background-color: #555;
+            border: 1px solid #7f8c8d;
+            border-radius: 4px;
+            overflow: hidden;
+            z-index: 60;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        #timer-bar-fill {
+            height: 100%;
+            width: 100%;
+            background-color: #f1c40f;
+            border-radius: 3px;
+            transition: width 0.1s linear, background-color 0.3s ease;
+        }
+
+        .rules-reminder { display: none; }
+
+        #clipboard {
+            position: absolute;
+            bottom: -100%;
+            left: 10%;
+            width: 80%;
+            height: 65%;
+            background: linear-gradient(to bottom, #e4d9a9, #d4c58b);
+            color: #3d301b;
+            border-top: 10px solid #8b4513;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.4);
+            z-index: 50;
+            transition: bottom 0.3s ease-in-out;
+            padding: 20px 30px 20px 30px;
+            box-sizing: border-box;
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+         #clipboard.active {
+             bottom: 0;
+         }
+
+         #clipboard h3 {
+             margin: 0 0 15px 0;
+             text-align: center;
+             font-size: 1.5em;
+             color: #5a3d1a;
+             border-bottom: 1px solid #a08d65;
+             padding-bottom: 5px;
+             flex-shrink: 0;
+         }
+
+        #clipboard-rules {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+            font-size: 1.0em;
+            line-height: 1.7;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        #clipboard-rules li {
+            padding: 4px 0;
+            border-bottom: 1px dotted #a08d65;
+            margin: 1px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #clipboard-rules li:last-child {
+            border-bottom: none;
+        }
+
+        .rule-text {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .rule-assessment-buttons {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .assess-btn {
+            padding: 3px 6px;
+            font-size: 1em;
+            border: 1px solid #a08d65;
+            background-color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .assess-btn:hover:not(.selected):not(:disabled) {
+            background-color: #ddd;
+        }
+
+        .assess-btn.selected {
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+            border-width: 2px;
+        }
+
+        .assess-btn.followed.selected {
+            background-color: #2ecc71;
+            border-color: #27ae60;
+            color: white;
+        }
+
+        .assess-btn.broken.selected {
+            background-color: #e74c3c;
+            border-color: #c0392b;
+            color: white;
+        }
+
+        .assess-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .feedback-correct .assess-btn.selected {
+        }
+        .feedback-incorrect .assess-btn.selected {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        .feedback-show-actual.followed {
+            background-color: rgba(46, 204, 113, 0.7) !important;
+            border-color: #27ae60 !important;
+            color: white !important;
+        }
+        .feedback-show-actual.broken {
+            background-color: rgba(231, 76, 60, 0.7) !important;
+            border-color: #c0392b !important;
+            color: white !important;
+        }
+
+        .clipboard-decision-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #a08d65;
+            flex-shrink: 0;
+        }
+
+        .clipboard-decision-buttons button {
+            margin: 0;
+            padding: 12px 25px;
+        }
+
+        .clipboard-decision-buttons button.reject {
+            background-color: #c0392b;
+            order: 1;
+        }
+        .clipboard-decision-buttons button.reject:hover:not(:disabled) {
+            background-color: #e74c3c;
+        }
+        .clipboard-decision-buttons button.admit {
+            background-color: #27ae60;
+            order: 2;
+        }
+        .clipboard-decision-buttons button.admit:hover:not(:disabled) {
+            background-color: #2ecc71;
+        }
+
+        #clipboard-trigger {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background-color: rgba(100, 116, 139, 0.6);
+            border: 1px solid rgba(156, 163, 175, 0.6);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            z-index: 51;
+            transition: background-color 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #clipboard-trigger span {
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+        }
+
+        #clipboard-trigger:hover {
+            background-color: rgba(156, 163, 175, 0.8);
+        }
+
+        #how-to-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            max-width: 600px;
+            max-height: 80%;
+            background-color: rgba(44, 62, 80, 0.95);
+            border: 2px solid #7f8c8d;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+            color: #ecf0f1;
+        }
+
+        #how-to-play.active {
+            display: block;
+        }
+
+        #how-to-play h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #f1c40f;
+        }
+
+        #how-to-play p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+            font-size: 1.1em;
+            text-align: left;
+        }
+
+        #close-how-to-play {
+            display: block;
+            margin: 25px auto 0 auto;
+            background-color: #c0392b;
+            padding: 10px 25px;
+        }
+
+        #close-how-to-play:hover {
+            background-color: #e74c3c;
+        }
+
+        #import-section {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        #import-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #import-textarea {
+            width: 95%;
+            height: 80px;
+            margin-bottom: 10px;
+            background-color: #dfe6e9;
+            color: #2d3436;
+            border: 1px solid #b2bec3;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        #import-feedback {
+            margin-top: 10px;
+            font-style: italic;
+            min-height: 1.2em;
+            font-weight: bold;
+        }
+
+        #import-feedback.success { color: #2ecc71; }
+        #import-feedback.error { color: #e74c3c; }
+
+        .feedback-message {
+            font-weight: bold;
+            margin-top: 0px;
+            display: block;
+            font-size: 1em;
+            padding: 5px 0;
+        }
+
+        .feedback-correct { color: #27ae60; }
+        .feedback-incorrect { color: #e74c3c; }
+
+        #review-challenge-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            width: 70%;
+            max-width: 500px;
+            text-align: center;
+            display: none;
+        }
+
+        #review-challenge-prompt {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        #review-challenge-input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #7f8c8d;
+            border-radius: 4px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            font-size: 1em;
+        }
+        #review-challenge-input.correct { border-color: #2ecc71; }
+        #review-challenge-input.incorrect { border-color: #e74c3c; }
+
+
+        #review-challenge-feedback {
+            min-height: 1.2em;
+            margin-top: 10px;
+            font-style: italic;
+            font-weight: bold;
+        }
+        #review-challenge-feedback.feedback-correct { color: #2ecc71; }
+        #review-challenge-feedback.feedback-incorrect { color: #e74c3c; }
+
+        .title-options-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+        .title-options {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .title-options label {
+            font-weight: normal;
+            font-size: 0.95em;
+        }
+        .title-options input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #f1c40f;
+        }
+
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+            color: white;
+        }
+        #pause-overlay h2 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #briefing-screen {
+            justify-content: flex-start;
+            padding-top: 40px;
+        }
+        #briefing-rules-box {
+            width: 60%;
+            max-width: 550px;
+            background: linear-gradient(to bottom, #ecf0f1, #d5dbdb);
+            color: #2c3e50;
+            border: 3px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 10px 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+        #briefing-rules-box h3 {
+            margin: 5px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #b0bec5;
+            font-size: 1.1em;
+        }
+        #briefing-rules {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 1em;
+            line-height: 1.8;
+        }
+        #briefing-rules li {
+            padding: 6px 10px;
+            border-bottom: 1px dashed #b0bec5;
+            text-align: left;
+        }
+        #briefing-rules li:last-child { border-bottom: none; }
+        #briefing-rules li:nth-child(even) { background-color: rgba(127, 140, 141, 0.1); }
+        #briefing-rules li.blank-rule { height: 1.8em; background-color: transparent !important; border-bottom: 1px dashed #b0bec5; }
+
+        #rep-dialogue {
+            width: 60%;
+            max-width: 500px;
+            top: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+            position: absolute;
+            padding: 15px 25px;
+        }
+        #rep-dialogue::before, #rep-dialogue::after { content: none; display: none; }
+
+        #representative {
+            background-image: url('images/representative.png');
+            left: 100px;
+            bottom: 150px;
+        }
+        #security-briefing {
+            background-image: url('images/security.png');
+            right: 100px;
+            bottom: 150px;
+        }
+        #start-shift-button {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #gameplay-screen {
+            justify-content: flex-start;
+        }
+        #security-gameplay {
+            background-image: url('images/security.png');
+            right: 150px;
+        }
+        #partygoer {
+            left: -250px;
+            transform: scaleX(1);
+            animation-duration: 1.2s;
+            animation-timing-function: ease-in-out;
+            animation-fill-mode: forwards;
+        }
+
+         #ask-buttons-container {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+            max-height: 250px;
+            overflow-y: auto;
+         }
+         .ask-button {
+            padding: 8px 15px;
+            font-size: 0.8em;
+            background-color: #636e72;
+            border: none;
+            border-bottom: 2px solid #2d3436;
+            text-transform: none;
+            letter-spacing: 0.5px;
+         }
+         .ask-button:hover:not(:disabled) {
+            background-color: #b2bec3;
+            color: #2d3436;
+            text-shadow: none;
+         }
+
+         @keyframes partygoerEnter {
+            from { left: -250px; opacity: 0; }
+            to { left: 150px; opacity: 1; }
+         }
+         @keyframes partygoerAccept {
+            0% { left: 150px; transform: scaleX(1) translateY(0); opacity: 1; }
+            20% { transform: scaleX(1) translateY(-20px); }
+            60% { left: 650px; transform: scaleX(1) translateY(0); opacity: 1; }
+            80% { transform: scaleX(1) translateY(-20px); }
+            100% { left: 1100px; transform: scaleX(1) translateY(0); opacity: 0; }
+         }
+         @keyframes partygoerReject {
+            0% { left: 150px; transform: scaleX(1); opacity: 1; }
+            25% { transform: scaleX(-1); }
+            100% { left: -250px; transform: scaleX(-1); opacity: 0; }
+         }
+         .animate-enter { animation-name: partygoerEnter; }
+         .animate-accept { animation-name: partygoerAccept; }
+         .animate-reject { animation-name: partygoerReject; }
+
+        #gameover-screen, #levelcomplete-screen, #review-screen {
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            text-align: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        #gameover-screen h2, #levelcomplete-screen h2, #review-screen h2 {
+            font-size: 2.5em;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #gameover-screen p, #levelcomplete-screen p {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        #review-screen #review-initial-message {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        #gameover-screen h2 { color: #e74c3c; }
+        #levelcomplete-screen h2 { color: #2ecc71; }
+        #review-screen h2 { color: #f1c40f; }
+
+        #review-screen #review-dialogue {
+            position: relative;
+            transform: none;
+            left: auto;
+            bottom: auto;
+            width: 60%;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        #review-screen #review-dialogue::before { display: none; }
+
+        #review-screen #representative-review {
+             position: relative;
+             left: auto;
+             bottom: auto;
+             margin: 0 auto 20px auto;
+             transform: none;
+             width: 180px;
+             height: 360px;
+             background-size: contain;
+             background-repeat: no-repeat;
+             background-position: center bottom;
+             image-rendering: pixelated;
+             image-rendering: -moz-crisp-edges;
+             image-rendering: crisp-edges;
+             filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.4));
+             background-color: rgba(255, 255, 255, 0.05);
+             background-image: url('images/representative.png');
+        }
+
+        #review-screen #continue-next-level-button {
+            margin-top: 30px;
+            display: none;
+        }
+
+        #title-screen {
+            justify-content: center;
+            text-align: center;
+        }
+        #title-screen h1 {
+            font-family: 'Onest', sans-serif;
+            font-weight: 800;
+            font-size: 3.5em;
+            color: #f1c40f;
+            text-shadow: 3px 3px 5px rgba(0,0,0,0.7);
+            margin-bottom: 20px;
+        }
+        #title-screen p {
+            font-size: 1.2em;
+            color: #bdc3c7;
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+        #title-screen .title-buttons {
+            margin-bottom: 20px;
+        }
+
+        #debug-info { display: none; }
+    </style>
+    </head>
+<body>
+    <p style="text-align: center; margin-bottom: 10px; font-family: sans-serif; color: #ccc; font-size: 0.9em;">
+        Se il gioco sembra troppo grande, prova a ridurre lo zoom (Ctrl/Cmd + Meno).
+    </p>
+
+    <div class="game-container">
+
+        <div id="debug-info"></div>
+
+        <div id="title-screen" class="screen">
+            <h1>Scatenafesta!</h1>
+            <p>Valuta se gli ospiti seguono o infrangono ogni regola.<br>Prendi la tua decisione finale Ammetti/Rifiuta per la festa!</p>
+             <div class="title-buttons">
+                <button id="start-game-button" disabled>Inizia Gioco</button>
+                <button id="how-to-play-button">Come Giocare</button>
+            </div>
+             <div class="title-options-container">
+                 <div class="title-options">
+                     <input type="checkbox" id="use-default-set-checkbox">
+                     <label for="use-default-set-checkbox">Usa dati di esempio?</label>
+                 </div>
+             </div>
+            <div id="import-section">
+                <label for="import-textarea">...o incolla il codice dati personalizzato (Sostituisce Esempio):</label>
+                <textarea id="import-textarea" spellcheck="false" placeholder="Esempio:\nRULE|piacePizza|TRUE|Deve piacere la pizza!\nPARTYGOER|nuovo_ospite|piaceSoda=T\nPRACTICE|vocab|Traduci: cane|dog|related_trait=piacePizza"></textarea>
+                <button id="import-data-button">Importa Dati</button>
+				<p><a href="https://docs.google.com/document/d/1ir0bZ5QhhTPmy6BMolxu6jZtORmQWQtc_a8OBhd2LSs/copy"> Vuoi creare il tuo codice di gioco? </a></p>
+                <p id="import-feedback"></p>
+            </div>
+        </div>
+
+        <div id="briefing-screen" class="screen">
+            <div id="briefing-rules-box"><h3>Regole:</h3><ul id="briefing-rules"></ul></div>
+            <div id="rep-dialogue" class="dialogue-box"><p>Dialogo del rappresentante...</p></div>
+            <div id="representative" class="character"></div>
+            <div id="security-briefing" class="character flipped"></div>
+            <button id="start-shift-button">Inizia Turno</button>
+        </div>
+
+        <div id="gameplay-screen" class="screen">
+            <div class="ui-bar">
+                <span id="level-display">Livello: 1</span>
+                <span id="score-display">Punteggio: 0</span>
+                <span id="lives-display">Vite: <span class="hearts">❤️❤️❤️</span></span>
+                <span id="quota-display">Quota: 0/0</span>
+                <button id="pause-button" style="margin-left: 20px;">Pausa</button>
+            </div>
+            <div id="timer-bar-container"><div id="timer-bar-fill"></div></div>
+            <div id="security-gameplay" class="character flipped"></div>
+            <div id="partygoer" class="character" style="opacity:0;"></div> <div class="dialogue-container">
+                <div id="partygoer-dialogue" class="dialogue-box">
+                    <p id="partygoer-speech">In attesa...</p>
+                </div>
+                <div id="feedback-box"></div> </div>
+            <div id="clipboard-trigger"><span>REGOLE</span></div>
+
+             <div id="pause-overlay">
+                 <h2>In Pausa</h2>
+                 <button id="resume-button">Riprendi</button>
+             </div>
+        </div>
+
+        <div id="gameover-screen" class="screen">
+            <h2>FINE PARTITA</h2>
+            <p id="final-score-gameover">Punteggio Finale: 0</p>
+            <p id="gameover-reason">Hai finito le vite!</p>
+            <button id="restart-button-gameover">Gioca Ancora</button>
+        </div>
+
+        <div id="levelcomplete-screen" class="screen">
+            <h2>Livello Completato!</h2>
+            <p id="final-score-levelcomplete">Punteggio Livello: 0/0</p>
+            <p id="levelcomplete-message">Quota raggiunta!</p>
+            </div>
+
+        <div id="review-screen" class="screen">
+             <h2>Revisione Turno</h2>
+             <div id="representative-review" class="character"></div>
+             <div id="review-dialogue" class="dialogue-box">
+                 <p id="review-initial-message"></p>
+             </div>
+             <div id="review-challenge-container">
+                <p id="review-challenge-prompt">Domanda di Esercitazione Qui</p>
+                <input type="text" id="review-challenge-input" placeholder="La tua risposta...">
+                <button id="review-challenge-submit-button">Invia Risposta</button>
+                <p id="review-challenge-feedback"></p>
+            </div>
+             <button id="continue-next-level-button">Continua al Prossimo Turno</button>
+        </div>
+
+        <div id="clipboard">
+            <h3>Valuta Ogni Regola (✅=Seguita, ❌=Infranta)</h3>
+            <ul id="clipboard-rules"></ul>
+            <div class="clipboard-decision-buttons">
+                <button id="clipboard-reject-button" class="reject" disabled>Rifiuta</button>
+                <button id="clipboard-admit-button" class="admit" disabled>Ammetti</button>
+            </div>
+        </div>
+
+        <div id="how-to-play">
+            <h2>Come Giocare</h2>
+            <p>Il tuo obiettivo è AMMETTERE o RIFIUTARE correttamente gli ospiti in base alle regole del livello.</p>
+            <p>Ascolta cosa dice l'ospite. Apri la lavagna delle regole (passa il mouse su 'REGOLE') per vedere le regole. Per OGNI regola, decidi se l'ospite la Segue (✅) o la Infrange (❌) usando i pulsanti.</p>
+            <p>Devi valutare TUTTE le regole prima di prendere una decisione. Una volta fatto, i pulsanti Ammetti e Rifiuta sulla lavagna si attiveranno.</p>
+            <p>Clicca Ammetti se l'ospite segue TUTTE le regole (hai segnato ✅ per tutte). Clicca Rifiuta se infrange QUALSIASI regola (hai segnato ❌ per almeno una).</p>
+            <p>Le decisioni corrette guadagnano punti e ti avvicinano alla quota. Le decisioni errate costano una vita (❤️). Anche esaurire il tempo costa una vita.</p>
+            <p>Alla fine del livello, il rappresentante potrebbe farti una rapida domanda di esercitazione. Rispondi per continuare!</p>
+            <button id="close-how-to-play">Chiudi</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const enableDebug = false;
+        const MAX_LIVES = 3;
+        const STARTING_LIVES = 3;
+        const TIMER_DURATION = 35;
+        const QUOTA_MAX = 10;
+        const TYPEWRITER_SPEED = 15;
+        const TIMER_INTERVAL_MS = 100;
+        const CLIPBOARD_HIDE_DELAY = 150;
+
+        // --- Game State Variables ---
+        let currentGameMode = 'standard';
+        let currentLevel = 1;
+        let lives = STARTING_LIVES;
+        let score = 0;
+        let quota = 0;
+        let quotaMet = 0;
+        let currentRules = [];
+        let currentPartygoer = null;
+        let isPartygoerAcceptable = false;
+        let gameActive = false;
+        let processingDecision = false;
+        let timerInterval = null;
+        let timeLeft = TIMER_DURATION;
+        let timerActive = false;
+        let ruleAssessments = {};
+        let typewriterInterval = null;
+        let currentChallenge = null;
+        let customDataImported = false;
+        let defaultGameDataParty = {};
+        let isPaused = false;
+        let allKnownTraitKeys = new Set();
+        let triggerHideTimeout = null;
+        let clipboardHideTimeout = null;
+
+        // --- Debug Logging ---
+        function debugLog(message) {
+            if (!enableDebug) return;
+            const timestamp = new Date().toLocaleTimeString();
+            console.log(`[DEBUG ${timestamp}] ${message}`);
+        }
+        debugLog("Script loading...");
+
+        // --- DOM Element References ---
+        const gameContainer = document.querySelector('.game-container');
+        const titleScreen = document.getElementById('title-screen');
+        const briefingScreen = document.getElementById('briefing-screen');
+        const gameplayScreen = document.getElementById('gameplay-screen');
+        const levelCompleteScreen = document.getElementById('levelcomplete-screen');
+        const gameOverScreen = document.getElementById('gameover-screen');
+        const reviewScreen = document.getElementById('review-screen');
+        const representativeChar = document.getElementById('representative');
+        const securityBriefingChar = document.getElementById('security-briefing');
+        const briefingRulesBox = document.getElementById('briefing-rules-box');
+        const briefingRulesList = document.getElementById('briefing-rules');
+        const repDialogueBox = document.getElementById('rep-dialogue');
+        const repDialogueText = repDialogueBox.querySelector('p');
+        const startShiftButton = document.getElementById('start-shift-button');
+        const startGameButton = document.getElementById('start-game-button');
+        const howToPlayButton = document.getElementById('how-to-play-button');
+        const useDefaultSetCheckbox = document.getElementById('use-default-set-checkbox');
+        const importTextarea = document.getElementById('import-textarea');
+        const importDataButton = document.getElementById('import-data-button');
+        const importFeedback = document.getElementById('import-feedback');
+        const securityGameplayChar = document.getElementById('security-gameplay');
+        const partygoerElement = document.getElementById('partygoer');
+        const dialogueContainer = document.querySelector('.dialogue-container');
+        const partygoerDialogueBox = document.getElementById('partygoer-dialogue');
+        const partygoerSpeech = document.getElementById('partygoer-speech');
+        const feedbackBox = document.getElementById('feedback-box');
+        const levelDisplay = document.getElementById('level-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display').querySelector('.hearts');
+        const quotaDisplay = document.getElementById('quota-display');
+        const timerBarFill = document.getElementById('timer-bar-fill');
+        const clipboard = document.getElementById('clipboard');
+        const clipboardRulesList = document.getElementById('clipboard-rules');
+        const clipboardTrigger = document.getElementById('clipboard-trigger');
+        const admitButton = document.getElementById('clipboard-admit-button');
+        const rejectButton = document.getElementById('clipboard-reject-button');
+        const pauseButton = document.getElementById('pause-button');
+        const resumeButton = document.getElementById('resume-button');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const howToPlayOverlay = document.getElementById('how-to-play');
+        const closeHowToPlayButton = document.getElementById('close-how-to-play');
+        const levelCompleteScoreDisplay = document.getElementById('final-score-levelcomplete');
+        const levelCompleteMessage = document.getElementById('levelcomplete-message');
+        const reviewDialogueBox = document.getElementById('review-dialogue');
+        const reviewInitialMessage = document.getElementById('review-initial-message');
+        const representativeReviewChar = document.getElementById('representative-review');
+        const reviewChallengeContainer = document.getElementById('review-challenge-container');
+        const reviewChallengePrompt = document.getElementById('review-challenge-prompt');
+        const reviewChallengeInput = document.getElementById('review-challenge-input');
+        const reviewChallengeSubmitButton = document.getElementById('review-challenge-submit-button');
+        const reviewChallengeFeedback = document.getElementById('review-challenge-feedback');
+        const continueNextLevelButton = document.getElementById('continue-next-level-button');
+        const gameOverScoreDisplay = document.getElementById('final-score-gameover');
+        const gameOverReason = document.getElementById('gameover-reason');
+        const restartButtonGameOver = document.getElementById('restart-button-gameover');
+        debugLog("DOM Elements cached.");
+
+        // --- Default Game Data (Italian) ---
+        defaultGameDataParty = {
+             rules: [
+                 { trait: 'piaceSoda', condition: false, text: 'Non deve piacere la soda.' },
+                 { trait: 'piacePizza', condition: true, text: 'Deve piacere la pizza.' },
+                 { trait: 'haTessera', condition: true, text: 'Ha bisogno della sua tessera.' },
+                 { trait: 'giocaInPiscina', condition: false, text: 'Non deve giocare in piscina.' },
+                 { trait: 'portatoRegalo', condition: true, text: 'Deve portare un regalo.' },
+                 { trait: 'haInvito', condition: true, text: 'Deve avere un invito.' },
+                 { trait: 'piaceMusica', condition: true, text: 'Deve piacere la musica.' },
+                 { trait: 'portatoSnack', condition: true, text: 'Deve portare snack.' },
+                 { trait: 'eVIP', condition: true, text: 'Ammetti i VIP.' },
+                 { trait: 'inListaInvitati', condition: true, text: 'Deve essere in lista.' },
+                 { trait: 'haAccompagnatore', condition: false, text: 'Nessun accompagnatore ammesso.' },
+                 { trait: 'giocaInPiscina', condition: false, isDouble: true, exception: { trait: 'portatoSnack', condition: true }, text_override: 'Non giocare in piscina, a meno che porti snack.' },
+                 { trait: 'haAccompagnatore', condition: false, isDouble: true, exception: { trait: 'eVIP', condition: true }, text_override: 'Nessun accompagnatore, a meno che sia VIP.' },
+                 { trait: 'piaceSoda', condition: false, isDouble: true, exception: { trait: 'portatoRegalo', condition: true }, text_override: 'Non deve piacere la soda, a meno che porti un regalo.' },
+             ],
+             phrases: {
+                 piaceSoda: { true: ["Mi piace la soda.", "Una soda ci starebbe bene.", "Sono un fan della soda."], false: ["Non mi piace la soda.", "Niente soda per me.", "Oggi evito la soda."] },
+                 piacePizza: { true: ["Mi piace la pizza.", "La pizza è fantastica!", "Spero ci sia la pizza!"], false: ["Non mi piace la pizza.", "Pizza? No grazie.", "Non ho voglia di pizza."] },
+                 haTessera: { true: ["Ho la mia tessera.", "Ecco la mia tessera.", "Tessera? Sì, ce l'ho."], false: ["Non ho la mia tessera.", "Devo aver dimenticato la tessera.", "Ops, niente tessera."] },
+                 giocaInPiscina: { true: ["Voglio giocare in piscina.", "Non vedo l'ora di andare in piscina!", "È aperta la piscina?"], false: ["Non giocherò in piscina.", "Oggi non vado in piscina.", "Resto all'asciutto, grazie."] },
+                 portatoRegalo: { true: ["Ho portato un regalo.", "Ho qualcosa per l'ospite.", "Regalo? Sì, eccolo."], false: ["Non ho portato un regalo.", "Ops, ho dimenticato il regalo.", "Non sono riuscito a trovare un regalo in tempo."] },
+                 haInvito: { true: ["Ho un invito.", "Il mio invito è qui.", "Ho ricevuto l'invito!"], false: ["Non ho un invito.", "Sembra che non abbia il mio invito.", "Serviva un invito?"] },
+                 piaceMusica: { true: ["Mi piace questa musica.", "Questa musica è bella!", "Ottima musica!"], false: ["Non mi piace questa musica.", "Questa musica non è il mio stile.", "Mmm, questa musica non mi convince."] },
+                 portatoSnack: { true: ["Ho portato degli snack.", "Ho degli snack da condividere.", "Snack? Fatto."], false: ["Non ho portato snack.", "Non ho portato niente da sgranocchiare, scusa.", "Niente snack da parte mia."] },
+                 eVIP: { true: ["Sono VIP.", "Lista VIP, sono io.", "Dovrei essere sulla lista VIP."], false: ["Non sono VIP.", "Solo un ospite normale.", "Nessuno status VIP."] },
+                 inListaInvitati: { true: ["Sono sulla lista invitati.", "Il mio nome dovrebbe essere sulla lista.", "Cerca il mio nome sulla lista."], false: ["Non sono sulla lista invitati.", "C'è una lista invitati?", "Mmm, potrei non essere in lista."] },
+                 haAccompagnatore: { true: ["Ho un accompagnatore.", "Ho portato qualcuno con me.", "Anche il mio accompagnatore è qui."], false: ["Non ho un accompagnatore.", "Sono venuto/a da solo/a.", "Solo io stasera."] }
+             },
+             partygoers: [
+                 { id: 'pg1', traits: { piaceSoda: false, piacePizza: true, haTessera: true, giocaInPiscina: false, portatoRegalo: false, haInvito: false, piaceMusica: true, portatoSnack: true, eVIP: false, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg2', traits: { piaceSoda: true, piacePizza: false, haTessera: false, giocaInPiscina: false, portatoRegalo: false, haInvito: false, piaceMusica: false, portatoSnack: false, eVIP: false, inListaInvitati: false, haAccompagnatore: false } },
+                 { id: 'pg3', traits: { piaceSoda: true, piacePizza: true, haTessera: false, giocaInPiscina: false, portatoRegalo: true, haInvito: true, piaceMusica: true, portatoSnack: false, eVIP: true, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg4', traits: { piaceSoda: false, piacePizza: false, haTessera: true, giocaInPiscina: false, portatoRegalo: false, haInvito: true, piaceMusica: false, portatoSnack: true, eVIP: false, inListaInvitati: true, haAccompagnatore: true } },
+                 { id: 'pg5', traits: { piaceSoda: true, piacePizza: true, haTessera: true, giocaInPiscina: false, portatoRegalo: false, haInvito: true, piaceMusica: true, portatoSnack: true, eVIP: true, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg6', traits: { piaceSoda: false, piacePizza: false, haTessera: false, giocaInPiscina: false, portatoRegalo: true, haInvito: true, piaceMusica: true, portatoSnack: false, eVIP: false, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg7', traits: { piaceSoda: true, piacePizza: true, haTessera: true, giocaInPiscina: false, portatoRegalo: false, haInvito: true, piaceMusica: true, portatoSnack: true, eVIP: true, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg8', traits: { piaceSoda: false, piacePizza: true, haTessera: true, giocaInPiscina: false, portatoRegalo: false, haInvito: true, piaceMusica: true, portatoSnack: true, eVIP: false, inListaInvitati: true, haAccompagnatore: false } },
+                 { id: 'pg9', traits: { piaceSoda: true, piacePizza: true, haTessera: true, giocaInPiscina: true, portatoRegalo: false, haInvito: true, piaceMusica: true, portatoSnack: true, eVIP: true, inListaInvitati: true, haAccompagnatore: true } },
+                 { id: 'pg10', traits: { piaceSoda: false, piacePizza: false, haTessera: false, giocaInPiscina: false, portatoRegalo: false, haInvito: false, piaceMusica: false, portatoSnack: true, eVIP: false, inListaInvitati: false, haAccompagnatore: false } },
+             ],
+             partygoerIDs: new Set(['pg1', 'pg2', 'pg3', 'pg4', 'pg5', 'pg6', 'pg7', 'pg8', 'pg9', 'pg10']),
+             practiceItems: [
+                 { type: 'conjugation', prompt: "Coniuga 'mangiare' (lui, presente)", answer: 'mangia', feedback_if_wrong: 'I verbi regolari in -are terminano in -a per lui/lei.', related_trait: null },
+                 { type: 'vocab', prompt: "Traduci: 'goodbye'", answer: 'arrivederci', feedback_if_wrong: "'Arrivederci' è la traduzione più comune.", related_trait: null },
+                 { type: 'conjugation', prompt: "Coniuga 'vivere' (noi, presente)", answer: 'viviamo', feedback_if_wrong: 'I verbi regolari in -ere terminano in -iamo per noi.', related_trait: null },
+                 { type: 'vocab', prompt: "Traduci: 'thank you'", answer: 'grazie', feedback_if_wrong: null, related_trait: null },
+                 { type: 'vocab', prompt: "Traduci: 'pizza'", answer: 'pizza', feedback_if_wrong: null, related_trait: 'piacePizza' },
+             ]
+        };
+        let gameData = {};
+
+        function loadDataSet(source, data = null) {
+            debugLog(`loadDataSet called with source: ${source}`);
+            if (source === 'custom' && data) {
+                gameData = data;
+                currentGameMode = 'custom';
+                debugLog("Loading provided custom game data set.");
+            } else if (source === true) {
+                gameData = JSON.parse(JSON.stringify(defaultGameDataParty));
+                currentGameMode = 'standard';
+                customDataImported = false;
+                debugLog("Loaded default game data set.");
+            }
+            else {
+                gameData = JSON.parse(JSON.stringify(defaultGameDataParty));
+                currentGameMode = 'standard';
+                customDataImported = false;
+                debugLog("WARN: Invalid source in loadDataSet, loading default set.");
+            }
+
+            allKnownTraitKeys.clear();
+            if (gameData && gameData.rules && Array.isArray(gameData.rules)) {
+                gameData.rules.forEach(r => {
+                    if (r && r.trait) {
+                        allKnownTraitKeys.add(r.trait);
+                        if (r.exception && r.exception.trait) allKnownTraitKeys.add(r.exception.trait);
+                    } else {
+                        debugLog("Warning: Found invalid rule structure during trait collection.");
+                    }
+                });
+                Object.keys(gameData.phrases || {}).forEach(t => allKnownTraitKeys.add(t));
+                (gameData.partygoers || []).forEach(p => {
+                     if (p && p.traits) {
+                         Object.keys(p.traits).forEach(t => allKnownTraitKeys.add(t));
+                     } else {
+                         debugLog(`Warning: Found invalid partygoer structure (ID: ${p?.id}) during trait collection.`);
+                     }
+                });
+
+                (gameData.partygoers || []).forEach(pg => {
+                    if (pg && pg.traits) {
+                        allKnownTraitKeys.forEach(trait => {
+                            if (!(trait in pg.traits)) {
+                                pg.traits[trait] = false;
+                            }
+                        });
+                    }
+                });
+                debugLog(`Active data set processed (${currentGameMode}). Rules: ${gameData.rules?.length || 0}, Partygoers: ${gameData.partygoers?.length || 0}, Practice: ${gameData.practiceItems?.length || 0}, Traits: ${allKnownTraitKeys.size}`);
+            } else {
+                debugLog(`CRITICAL ERROR: gameData or gameData.rules is invalid after assignment in loadDataSet! gameData.rules: ${JSON.stringify(gameData?.rules)}`);
+                if(startGameButton) startGameButton.disabled = true;
+                if(importFeedback) {
+                    importFeedback.textContent = "Errore fatale nell'elaborazione dei dati. Prova a ricaricare o controlla i dati importati.";
+                    importFeedback.className = 'error';
+                }
+                gameData = { rules: [], phrases: {}, partygoers: [], partygoerIDs: new Set(), practiceItems: [] };
+            }
+        }
+
+        function switchScreen(screenToShow) {
+            debugLog(`Switching screen to: ${screenToShow.id}`);
+            titleScreen.classList.remove('active');
+            briefingScreen.classList.remove('active');
+            gameplayScreen.classList.remove('active');
+            levelCompleteScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            reviewScreen.classList.remove('active');
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+            howToPlayOverlay.classList.remove('active');
+            pauseOverlay.style.display = 'none';
+            screenToShow.classList.add('active');
+        }
+
+        function updateUI() {
+            if (!scoreDisplay || !levelDisplay || !quotaDisplay || !livesDisplay) {
+                debugLog("ERROR: One or more UI display elements not found!");
+                return;
+            }
+            scoreDisplay.textContent = `Punteggio: ${score}`;
+            levelDisplay.textContent = `Livello: ${currentLevel}`;
+            quotaDisplay.textContent = `Quota: ${quotaMet}/${quota}`;
+            let hearts = '';
+            for (let i = 0; i < MAX_LIVES; i++) {
+                hearts += (i < lives) ? '❤️' : '🖤';
+            }
+            livesDisplay.innerHTML = hearts;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            if (timerBarFill) {
+                const percentage = Math.max(0, (timeLeft / TIMER_DURATION) * 100);
+                timerBarFill.style.width = `${percentage}%`;
+                if (percentage < 25) {
+                    timerBarFill.style.backgroundColor = '#e74c3c';
+                } else if (percentage < 50) {
+                    timerBarFill.style.backgroundColor = '#e67e22';
+                } else {
+                    timerBarFill.style.backgroundColor = '#f1c40f';
+                }
+            } else {
+                debugLog("Timer bar fill element not found!");
+            }
+        }
+
+        function generateRules(level) {
+            debugLog(`Generating rules for Level ${level}`);
+            const availableRules = gameData.rules || [];
+            if (!availableRules || availableRules.length === 0) {
+                debugLog(`CRITICAL ERROR: No rules available in active dataset for level generation!`);
+                return [];
+            }
+
+            const standardRulesPool = availableRules.filter(rule => !rule.isDouble);
+            const complexRulesPool = availableRules.filter(rule => rule.isDouble);
+            let selectedRules = [];
+            let numStandard = 0;
+            let numComplex = 0;
+
+            if (level === 1) { numStandard = 1; numComplex = 0; }
+            else if (level === 2) { numStandard = 2; numComplex = 0; }
+            else if (level === 3) { numStandard = 3; numComplex = 0; }
+            else if (level === 4) { numStandard = 2; numComplex = 1; }
+            else if (level === 5) { numStandard = 1; numComplex = 2; }
+            else { numStandard = 0; numComplex = 3; }
+
+            numStandard = Math.min(numStandard, standardRulesPool.length);
+            numComplex = Math.min(numComplex, complexRulesPool.length);
+
+            debugLog(`Level ${level}: Selecting ${numStandard} standard, ${numComplex} complex rules.`);
+
+            shuffleArray(standardRulesPool);
+            for (let i = 0; i < numStandard; i++) {
+                selectedRules.push(standardRulesPool[i]);
+            }
+
+            shuffleArray(complexRulesPool);
+            for (let i = 0; i < numComplex; i++) {
+                selectedRules.push(complexRulesPool[i]);
+            }
+
+            currentRules = shuffleArray(selectedRules);
+            currentRules.forEach(rule => {
+                rule.displayText = rule.text_override || rule.text;
+            });
+            debugLog(`Generated ${currentRules.length} final rules: ${JSON.stringify(currentRules.map(r => r.displayText))}`);
+            return currentRules;
+        }
+
+        function isPartygoerCompliant(partygoer, rulesToCheck) {
+            if (!partygoer || !partygoer.traits) {
+                debugLog("Error: Invalid partygoer data in isPartygoerCompliant.");
+                return false;
+            }
+            if (!rulesToCheck || rulesToCheck.length === 0) {
+                return true;
+            }
+            for (const rule of rulesToCheck) {
+                if (doesPartygoerViolateRule(partygoer, rule)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function doesPartygoerViolateRule(partygoer, rule) {
+             if (!partygoer || !partygoer.traits || !rule) {
+                 debugLog("Error: Invalid data in doesPartygoerViolateRule.");
+                 return false;
+             }
+             const traitName = rule.trait;
+             const requiredCondition = rule.condition;
+             const partygoerHasTrait = partygoer.traits[traitName] === true;
+
+             let ruleViolated = false;
+             if (requiredCondition === true && !partygoerHasTrait) {
+                 ruleViolated = true;
+             } else if (requiredCondition === false && partygoerHasTrait) {
+                 ruleViolated = true;
+             }
+
+             if (ruleViolated && rule.isDouble && rule.exception) {
+                 const exceptionTraitName = rule.exception.trait;
+                 const exceptionCondition = rule.exception.condition;
+                 const partygoerMeetsException = partygoer.traits[exceptionTraitName] === exceptionCondition;
+
+                 if (partygoerMeetsException) {
+                     ruleViolated = false;
+                 }
+             }
+             return ruleViolated;
+        }
+
+        function setupLevel(level) {
+            debugLog(`Setting up Level ${level}`);
+            currentLevel = level;
+            quotaMet = 0;
+            quota = Math.min(currentLevel + 2, QUOTA_MAX);
+            gameActive = false;
+            processingDecision = false;
+            ruleAssessments = {};
+            currentRules = generateRules(level);
+
+            if (!currentRules || currentRules.length === 0) {
+                 debugLog("CRITICAL ERROR: Failed to generate rules for level. Cannot proceed.");
+                 gameOver("Errore di Sistema: Impossibile generare le regole.");
+                 return;
+            }
+
+            briefingRulesList.innerHTML = '';
+            clipboardRulesList.innerHTML = '';
+
+            if (!briefingRulesList || !clipboardRulesList) {
+                debugLog("CRITICAL ERROR: Rule/Clipboard list element(s) not found during setupLevel!");
+                return;
+            }
+
+            currentRules.forEach((rule, index) => {
+                ruleAssessments[index] = null;
+
+                const liBriefing = document.createElement('li');
+                liBriefing.textContent = rule.displayText;
+                briefingRulesList.appendChild(liBriefing);
+
+                const liClipboard = document.createElement('li');
+                liClipboard.dataset.ruleIndex = index;
+
+                const ruleTextSpan = document.createElement('span');
+                ruleTextSpan.classList.add('rule-text');
+                ruleTextSpan.textContent = rule.displayText;
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.classList.add('rule-assessment-buttons');
+
+                const followedButton = document.createElement('button');
+                followedButton.classList.add('assess-btn', 'followed');
+                followedButton.dataset.ruleIndex = index;
+                followedButton.dataset.assessment = 'followed';
+                followedButton.textContent = '✅';
+                followedButton.addEventListener('click', handleAssessmentButtonClick);
+                followedButton.disabled = true;
+
+                const brokenButton = document.createElement('button');
+                brokenButton.classList.add('assess-btn', 'broken');
+                brokenButton.dataset.ruleIndex = index;
+                brokenButton.dataset.assessment = 'broken';
+                brokenButton.textContent = '❌';
+                brokenButton.addEventListener('click', handleAssessmentButtonClick);
+                brokenButton.disabled = true;
+
+                buttonContainer.appendChild(followedButton);
+                buttonContainer.appendChild(brokenButton);
+                liClipboard.appendChild(ruleTextSpan);
+                liClipboard.appendChild(buttonContainer);
+                clipboardRulesList.appendChild(liClipboard);
+            });
+            debugLog("Briefing & Clipboard rules lists populated.");
+
+            let repSpeech = `Bene, Livello ${level}. Ci sono ${currentRules.length} regole questa volta. Valutale tutte (✅/❌) sulla lavagna, poi prendi la tua decisione. Quota: <strong>${quota}</strong>.`;
+            if (level === 1) {
+                repSpeech = `Bene recluta, primo turno. Apri la lavagna delle regole qui sotto ('REGOLE'). Per ogni regola, decidi se l'ospite la Segue (✅) o la Infrange (❌). Valuta TUTTE le regole, poi clicca Ammetti o Rifiuta. Quota: <strong>${quota}</strong>. Buona fortuna!`;
+            }
+            if(repDialogueText) repDialogueText.innerHTML = repSpeech;
+
+            updateUI();
+            resetTimer();
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+
+            if(representativeChar) representativeChar.classList.remove('flipped');
+            if(securityBriefingChar) securityBriefingChar.classList.add('flipped');
+
+            switchScreen(briefingScreen);
+            debugLog("Briefing screen setup complete.");
+        }
+
+        function startShift() {
+            debugLog("Start Shift button clicked.");
+            if (processingDecision) return;
+            switchScreen(gameplayScreen);
+            debugLog("Switched to gameplay screen.");
+            loadNextPartygoer();
+        }
+
+        function startTimer() {
+            if (timerActive || isPaused) return;
+            debugLog("Starting decision timer.");
+            timerActive = true;
+            timeLeft = TIMER_DURATION;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                if (isPaused) return;
+
+                timeLeft -= (TIMER_INTERVAL_MS / 1000);
+                timeLeft = Math.max(0, timeLeft);
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    handleTimeout();
+                }
+            }, TIMER_INTERVAL_MS);
+        }
+
+        function stopTimer() {
+            if (!timerActive) return;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerActive = false;
+        }
+
+        function resetTimer() {
+            stopTimer();
+            timeLeft = TIMER_DURATION;
+            updateTimerDisplay();
+        }
+
+        function handleTimeout() {
+            debugLog("TIMER TIMEOUT!");
+            stopTimer();
+            stopTypewriter();
+
+            if (!gameplayScreen.classList.contains('active') || processingDecision) {
+                debugLog("Timeout ignored (screen not active or processing).");
+                return;
+            }
+
+            processingDecision = true;
+            gameActive = false;
+
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+
+            lives--;
+            debugLog(`Lost a life due to timeout! Lives left: ${lives}`);
+            updateUI();
+
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+
+            if(feedbackBox) {
+                feedbackBox.innerHTML = "<span class='feedback-message feedback-incorrect'>Tempo scaduto! (-1 Vita)</span>";
+                feedbackBox.classList.add('visible');
+            }
+
+            triggerAnimation(partygoerElement, 'animate-reject', () => {
+                debugLog("Timeout animation finished.");
+                if (lives <= 0) {
+                    debugLog("Game Over after timeout.");
+                    gameOver("Hai esaurito il tempo e le vite!");
+                } else {
+                    debugLog("Loading next partygoer after timeout.");
+                    loadNextPartygoer();
+                }
+            });
+        }
+
+        function getRandomTraitPhrase(traitName, traitValue) {
+            const stateKey = traitValue ? 'true' : 'false';
+            const phrasesPool = gameData.phrases || {};
+
+            if (phrasesPool[traitName] && phrasesPool[traitName][stateKey] && phrasesPool[traitName][stateKey].length > 0) {
+                const phrases = phrasesPool[traitName][stateKey];
+                const randomIndex = Math.floor(Math.random() * phrases.length);
+                return phrases[randomIndex];
+            } else {
+                return `${traitName}: ${traitValue}`;
+            }
+        }
+
+        function shuffleArray(array) {
+            if (!array) return [];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function typewriterEffect(element, text, callback) {
+            stopTypewriter();
+            if (!element) {
+                debugLog("Error: Typewriter target element not found.");
+                if (callback) callback();
+                return;
+            }
+            element.innerHTML = '';
+            let i = 0;
+            const lines = text.split('<br>');
+            let currentLine = 0;
+            let currentText = '';
+
+            typewriterInterval = setInterval(() => {
+                if (isPaused) return;
+
+                if (currentLine < lines.length) {
+                    const line = lines[currentLine];
+                    if (!line && i === 0) {
+                        currentLine++;
+                        if (currentLine < lines.length) element.innerHTML += '<br>';
+                        return;
+                    }
+
+                    if (i < line.length) {
+                        currentText += line.charAt(i);
+                        element.innerHTML = lines.slice(0, currentLine).join('<br>') + (currentLine > 0 ? '<br>' : '') + currentText;
+                        i++;
+                    } else {
+                        currentLine++;
+                        i = 0;
+                        currentText = '';
+                        if (currentLine < lines.length) {
+                            element.innerHTML += '<br>';
+                        }
+                    }
+                } else {
+                    stopTypewriter();
+                    if (callback) callback();
+                }
+            }, TYPEWRITER_SPEED);
+        }
+
+        function stopTypewriter() {
+            if (typewriterInterval) {
+                clearInterval(typewriterInterval);
+                typewriterInterval = null;
+            }
+        }
+
+        function loadNextPartygoer() {
+            debugLog(`Attempting to load next partygoer...`);
+            resetTimer();
+            stopTypewriter();
+
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            ruleAssessments = {};
+
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+            if(feedbackBox) {
+                feedbackBox.innerHTML = '';
+                feedbackBox.classList.remove('visible');
+            }
+            if(partygoerDialogueBox) partygoerDialogueBox.style.opacity = 1;
+
+            clipboardRulesList.querySelectorAll('li').forEach(li => {
+                li.classList.remove('feedback-correct', 'feedback-incorrect', 'feedback-show-actual');
+                const buttons = li.querySelectorAll('.assess-btn');
+                buttons.forEach(btn => {
+                    btn.classList.remove('selected', 'feedback-show-actual', 'followed', 'broken');
+                    btn.disabled = true;
+                    btn.removeEventListener('click', handleAssessmentButtonClick);
+                    btn.addEventListener('click', handleAssessmentButtonClick);
+                });
+                const ruleIndex = parseInt(li.dataset.ruleIndex, 10);
+                if (!isNaN(ruleIndex)) {
+                    ruleAssessments[ruleIndex] = null;
+                }
+            });
+
+            if (quotaMet >= quota) {
+                debugLog(`Quota met (${quotaMet}/${quota}). Level Complete.`);
+                levelComplete();
+                return;
+            }
+
+            const partygoerPool = gameData.partygoers || [];
+            if (!partygoerPool || partygoerPool.length === 0) {
+                debugLog(`CRITICAL ERROR: No partygoers available in active dataset!`);
+                gameOver(`Errore di Sistema: Nessun ospite definito!`);
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * partygoerPool.length);
+            currentPartygoer = partygoerPool[randomIndex];
+            isPartygoerAcceptable = isPartygoerCompliant(currentPartygoer, currentRules);
+            debugLog(`Selected partygoer ID: ${currentPartygoer.id}. Compliant: ${isPartygoerAcceptable}`);
+
+            const maxPartygoerImages = 17;
+            const imageIndex = (Math.floor(Math.random() * maxPartygoerImages)) + 1;
+            const imageNumber = imageIndex.toString().padStart(2, '0');
+            if(partygoerElement) partygoerElement.style.backgroundImage = `url('images/image${imageNumber}.png')`;
+
+            let dialogueSentences = [];
+            const partygoerTraits = currentPartygoer.traits;
+            const allTraitKeysFromGoer = Object.keys(partygoerTraits);
+            let mentionedTraits = new Set();
+
+            let relevantTraitKeys = new Set();
+            currentRules.forEach(rule => {
+                 relevantTraitKeys.add(rule.trait);
+                 if (rule.isDouble && rule.exception) {
+                     relevantTraitKeys.add(rule.exception.trait);
+                 }
+            });
+            let relevantTraitArray = Array.from(relevantTraitKeys);
+            shuffleArray(relevantTraitArray);
+
+            relevantTraitArray.forEach(traitName => {
+                addTraitSentence(traitName);
+            });
+
+            const neededFiller = 5 - dialogueSentences.length;
+            if (neededFiller > 0) {
+                let availableFillerTraits = allTraitKeysFromGoer.filter(t => !mentionedTraits.has(t) && partygoerTraits.hasOwnProperty(t));
+                shuffleArray(availableFillerTraits);
+                for (let i = 0; i < Math.min(neededFiller, availableFillerTraits.length); i++) {
+                    addTraitSentence(availableFillerTraits[i]);
+                }
+            }
+
+            function addTraitSentence(traitName) {
+                if (partygoerTraits.hasOwnProperty(traitName) && !mentionedTraits.has(traitName)) {
+                    const traitValue = partygoerTraits[traitName];
+                    dialogueSentences.push(getRandomTraitPhrase(traitName, traitValue));
+                    mentionedTraits.add(traitName);
+                    return true;
+                }
+                return false;
+            };
+
+            dialogueSentences = shuffleArray(dialogueSentences);
+            if (dialogueSentences.length === 0) {
+                 dialogueSentences.push("Ciao.");
+            }
+            const finalDialogue = dialogueSentences.join("<br>");
+            debugLog(`Dialogue to type: "${finalDialogue.replace(/<br>/g, ' // ')}"`);
+
+            if(partygoerElement) {
+                partygoerElement.classList.remove('animate-enter', 'animate-accept', 'animate-reject', 'flipped');
+                partygoerElement.style.left = '-250px';
+                partygoerElement.style.opacity = '0';
+                void partygoerElement.offsetWidth;
+            }
+
+            debugLog("Triggering partygoer enter animation.");
+            gameActive = false;
+            processingDecision = true;
+            triggerAnimation(partygoerElement, 'animate-enter', () => {
+                debugLog("Partygoer enter animation finished.");
+                if(partygoerElement) partygoerElement.style.opacity = '1';
+
+                processingDecision = true;
+                typewriterEffect(partygoerSpeech, finalDialogue, () => {
+                     debugLog("Typewriter finished.");
+                     gameActive = true;
+                     processingDecision = false;
+                     clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = false);
+                     startTimer();
+                     debugLog("Assessment interaction enabled and timer started.");
+                });
+            });
+        }
+
+        function handleAssessmentButtonClick(event) {
+            if (processingDecision || isPaused) {
+                debugLog(`Assessment button click ignored (processing/paused)`);
+                return;
+            }
+            const clickedButton = event.target;
+            const ruleIndex = parseInt(clickedButton.dataset.ruleIndex, 10);
+            const assessment = clickedButton.dataset.assessment;
+
+            if (isNaN(ruleIndex) || !assessment) {
+                debugLog("Error: Invalid data on assessment button.");
+                return;
+            }
+
+            ruleAssessments[ruleIndex] = assessment;
+            debugLog(`Rule ${ruleIndex} assessed as: ${assessment}`);
+
+            const parentLi = clickedButton.closest('li');
+            if (parentLi) {
+                const buttonsInLi = parentLi.querySelectorAll('.assess-btn');
+                buttonsInLi.forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                clickedButton.classList.add('selected');
+            }
+
+            checkAllRulesAssessed();
+        }
+
+        function checkAllRulesAssessed() {
+            const totalRules = currentRules.length;
+            let assessedCount = 0;
+            for (let i = 0; i < totalRules; i++) {
+                if (ruleAssessments[i] === 'followed' || ruleAssessments[i] === 'broken') {
+                    assessedCount++;
+                }
+            }
+            const allAssessed = assessedCount === totalRules;
+
+            if(admitButton) admitButton.disabled = !allAssessed || !gameActive || isPaused;
+            if(rejectButton) rejectButton.disabled = !allAssessed || !gameActive || isPaused;
+
+            return allAssessed;
+        }
+
+        function handleDecision(admitted) {
+            if (!gameActive || processingDecision || !timerActive || isPaused) {
+                debugLog(`Decision ignored (inactive/processing/paused/no timer)`);
+                return;
+            }
+            if (!checkAllRulesAssessed()) {
+                debugLog("Decision attempt failed: Not all rules assessed.");
+                return;
+            }
+
+            debugLog(`Handling decision: Player clicked ${admitted ? 'ADMIT' : 'REJECT'}.`);
+            stopTimer();
+            stopTypewriter();
+            gameActive = false;
+            processingDecision = true;
+
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+
+            let correctDecision = false;
+            let issue = "";
+            let feedbackText = "";
+            let animationToPlay = admitted ? 'animate-accept' : 'animate-reject';
+
+            const actualOverallCompliance = isPartygoerCompliant(currentPartygoer, currentRules);
+            const actualRuleStatuses = {};
+            currentRules.forEach((rule, index) => {
+                actualRuleStatuses[index] = doesPartygoerViolateRule(currentPartygoer, rule) ? 'broken' : 'followed';
+            });
+
+            if (admitted) {
+                if (actualOverallCompliance) {
+                    let allMarkedFollowed = true;
+                    for (let i = 0; i < currentRules.length; i++) {
+                        if (ruleAssessments[i] !== 'followed') {
+                            allMarkedFollowed = false; break;
+                        }
+                    }
+                    if (allMarkedFollowed) {
+                        correctDecision = true;
+                        feedbackText = "Corretto! Ospite ammesso.";
+                        debugLog("Correct Admit!");
+                    } else {
+                        correctDecision = false;
+                        issue = "Incorrect Admit: Marked rule as broken.";
+                        feedbackText = `Decisione Corretta (Ammetti), ma Valutazione Errata: Hai segnato una regola come infranta quando tutte erano seguite.`;
+                        debugLog(issue + " (Admitted compliant guest but marked a rule broken)");
+                    }
+                } else {
+                    correctDecision = false;
+                    const violationIndices = Object.keys(actualRuleStatuses).filter(idx => actualRuleStatuses[idx] === 'broken');
+                    const violationTexts = violationIndices.map(index => `"${currentRules[index].displayText}"`).join(', ');
+                    issue = `Incorrect Admit: Partygoer violated rules: ${violationTexts}`;
+                    feedbackText = `Errato! L'ospite doveva essere rifiutato. Ha infranto le regole: ${violationTexts}`;
+                    debugLog(issue);
+                }
+            } else {
+                if (actualOverallCompliance) {
+                    correctDecision = false;
+                    issue = "Incorrect Reject: Partygoer was compliant.";
+                    feedbackText = `Errato! L'ospite doveva essere ammesso.`;
+                    debugLog(issue);
+                } else {
+                    let assessmentMatches = true;
+                    let incorrectAssessmentsInfo = [];
+                    for (let i = 0; i < currentRules.length; i++) {
+                        if (ruleAssessments[i] !== actualRuleStatuses[i]) {
+                            assessmentMatches = false;
+                            incorrectAssessmentsInfo.push(`Regola "${currentRules[i].displayText}" era ${actualRuleStatuses[i] === 'followed' ? 'seguita' : 'infranta'} (tu hai valutato ${ruleAssessments[i] === 'followed' ? 'seguita' : 'infranta'}).`);
+                        }
+                    }
+
+                    if (assessmentMatches) {
+                        correctDecision = true;
+                        feedbackText = "Corretto! Ospite rifiutato.";
+                        debugLog("Correct Reject! All assessments matched.");
+                    } else {
+                        correctDecision = false;
+                        issue = "Incorrect Reject: Assessment inaccurate.";
+                        feedbackText = `Decisione Corretta (Rifiuta), ma Valutazione Errata: ${incorrectAssessmentsInfo.join(' ')}`;
+                        debugLog(issue + " Details: " + incorrectAssessmentsInfo.join('; '));
+                    }
+                }
+            }
+
+            if(feedbackBox) {
+                feedbackBox.innerHTML = `<span class='feedback-message ${correctDecision ? 'feedback-correct' : 'feedback-incorrect'}'>${feedbackText}</span>`;
+                feedbackBox.classList.add('visible');
+            }
+
+             if (!correctDecision) {
+                 clipboardRulesList.querySelectorAll('li').forEach(li => {
+                    const ruleIndex = parseInt(li.dataset.ruleIndex, 10);
+                    if (isNaN(ruleIndex)) return;
+
+                    li.classList.add(ruleAssessments[ruleIndex] === actualRuleStatuses[ruleIndex] ? 'feedback-correct' : 'feedback-incorrect');
+
+                    const buttons = li.querySelectorAll('.assess-btn');
+                    buttons.forEach(btn => {
+                        if (btn.dataset.assessment === actualRuleStatuses[ruleIndex]) {
+                            btn.classList.add('feedback-show-actual');
+                        }
+                    });
+                 });
+                 clipboard.classList.add('active');
+                 gameContainer.classList.add('clipboard-active');
+                 setTimeout(() => {
+                     clipboard.classList.remove('active');
+                     gameContainer.classList.remove('clipboard-active');
+                 }, 2500);
+            }
+
+            if (correctDecision) {
+                score++;
+                quotaMet++;
+            } else {
+                lives--;
+                debugLog(`Lost a life. Reason: ${issue || 'Incorrect Decision/Assessment'}. Lives left: ${lives}`);
+            }
+            updateUI();
+
+            if (lives <= 0) {
+                debugLog("Game Over triggered by incorrect decision.");
+                setTimeout(() => {
+                    triggerAnimation(partygoerElement, animationToPlay, () => gameOver(issue || `Hai finito le vite al Livello ${currentLevel}.`));
+                }, 1500);
+                return;
+            }
+
+            debugLog(`Triggering animation: ${animationToPlay}`);
+            setTimeout(() => {
+                triggerAnimation(partygoerElement, animationToPlay, () => {
+                    debugLog(`Animation ${animationToPlay} finished.`);
+                    if (quotaMet >= quota) {
+                        debugLog("Quota met post-animation.");
+                        levelComplete();
+                    } else {
+                        debugLog("Loading next partygoer.");
+                        loadNextPartygoer();
+                    }
+                });
+            }, 1200);
+        }
+
+        function triggerAnimation(element, animationClass, callback) {
+            if (!element) {
+                debugLog(`Error: Element not found for animation '${animationClass}'.`);
+                if(callback) callback();
+                return;
+            }
+
+            const listener = (event) => {
+                if (event.target !== element) return;
+                element.removeEventListener('animationend', listener);
+                if (callback) {
+                    callback();
+                }
+            };
+
+            element.addEventListener('animationend', listener, { once: true });
+
+            element.classList.remove('animate-enter', 'animate-accept', 'animate-reject', 'flipped');
+            if (animationClass !== 'animate-enter') {
+                element.style.opacity = '1';
+            }
+            if (animationClass === 'animate-reject') {
+                element.classList.add('flipped');
+            }
+            void element.offsetWidth;
+            element.classList.add(animationClass);
+        }
+
+        function levelComplete() {
+            debugLog("Level Complete called.");
+            stopTimer();
+            stopTypewriter();
+            gameActive = false;
+            processingDecision = true;
+
+            if(levelCompleteScoreDisplay) levelCompleteScoreDisplay.textContent = `Punteggio Livello: ${quotaMet}/${quota}`;
+            if(levelCompleteMessage) levelCompleteMessage.textContent = `Quota raggiunta! Preparazione revisione...`;
+            switchScreen(levelCompleteScreen);
+
+            setTimeout(() => {
+                setupReviewScreen();
+            }, 1500);
+        }
+
+        function setupReviewScreen() {
+             debugLog("Setting up Review Screen.");
+             if(reviewInitialMessage) reviewInitialMessage.textContent = "Buon lavoro in quel turno. Rivediamo qualcosa velocemente...";
+
+             if(representativeReviewChar) representativeReviewChar.style.backgroundImage = `url('images/representative.png')`;
+
+             currentChallenge = null;
+             const availableChallenges = gameData.practiceItems || [];
+
+             if (availableChallenges.length > 0) {
+                 const relatedTraits = currentRules.map(r => r.trait);
+                 let potentialChallenges = availableChallenges.filter(item =>
+                     item.related_trait && relatedTraits.includes(item.related_trait)
+                 );
+
+                 if (potentialChallenges.length > 0) {
+                     debugLog(`Found ${potentialChallenges.length} challenges related to level ${currentLevel} rules.`);
+                     const challengeIndex = Math.floor(Math.random() * potentialChallenges.length);
+                     currentChallenge = potentialChallenges[challengeIndex];
+                 } else {
+                     debugLog("No related challenges found, picking randomly from all practice items.");
+                     const challengeIndex = Math.floor(Math.random() * availableChallenges.length);
+                     currentChallenge = availableChallenges[challengeIndex];
+                 }
+
+                 debugLog(`Selected challenge: ${JSON.stringify(currentChallenge)}`);
+
+                 if(reviewChallengePrompt) reviewChallengePrompt.textContent = currentChallenge.prompt;
+                 if(reviewChallengeInput) {
+                     reviewChallengeInput.value = '';
+                     reviewChallengeInput.disabled = false;
+                     reviewChallengeInput.classList.remove('correct', 'incorrect');
+                 }
+                 if(reviewChallengeFeedback) {
+                     reviewChallengeFeedback.textContent = '';
+                     reviewChallengeFeedback.className = '';
+                 }
+                 if(reviewChallengeSubmitButton) reviewChallengeSubmitButton.disabled = false;
+
+                 if(reviewChallengeContainer) reviewChallengeContainer.style.display = 'block';
+                 if(continueNextLevelButton) continueNextLevelButton.style.display = 'none';
+
+             } else {
+                 debugLog("No practice items found for review challenge.");
+                 if(reviewChallengeContainer) reviewChallengeContainer.style.display = 'none';
+                 if(reviewInitialMessage) reviewInitialMessage.textContent = "Buon lavoro! Sembra che tutto sia a posto per ora. Puoi continuare.";
+                 if(continueNextLevelButton) continueNextLevelButton.style.display = 'block';
+             }
+
+             switchScreen(reviewScreen);
+             processingDecision = false;
+        }
+
+        function handleReviewChallengeSubmit() {
+            if (!currentChallenge || !reviewChallengeInput || !reviewChallengeFeedback || !reviewChallengeSubmitButton || !continueNextLevelButton) {
+                 debugLog("Error: Missing elements for review challenge submission.");
+                 return;
+            }
+            const playerAnswer = reviewChallengeInput.value.trim().toLowerCase();
+            const correctAnswer = currentChallenge.answer.toLowerCase();
+            debugLog(`Review Challenge submitted. Player: "${playerAnswer}", Correct: "${correctAnswer}"`);
+
+            reviewChallengeSubmitButton.disabled = true;
+            reviewChallengeInput.disabled = true;
+
+            if (playerAnswer === correctAnswer) {
+                reviewChallengeFeedback.textContent = "Corretto!";
+                reviewChallengeFeedback.className = 'feedback-correct';
+                reviewChallengeInput.classList.add('correct');
+                debugLog("Review Challenge correct.");
+                setTimeout(() => { continueNextLevelButton.style.display = 'block'; }, 1000);
+            } else {
+                let feedbackText = `Errato. La risposta corretta è: "${currentChallenge.answer}".`;
+                if (currentChallenge.feedback_if_wrong) {
+                    feedbackText += ` (${currentChallenge.feedback_if_wrong})`;
+                }
+                reviewChallengeFeedback.textContent = feedbackText;
+                reviewChallengeFeedback.className = 'feedback-incorrect';
+                reviewChallengeInput.classList.add('incorrect');
+                debugLog("Review Challenge incorrect.");
+                setTimeout(() => { continueNextLevelButton.style.display = 'block'; }, 2500);
+            }
+            currentChallenge = null;
+        }
+
+        function nextLevel() {
+            debugLog("Next Level button clicked.");
+            currentLevel++;
+            setupLevel(currentLevel);
+        }
+
+        function gameOver(reason = "Hai finito le vite!") {
+            debugLog("Game Over called.");
+            stopTimer();
+            stopTypewriter();
+            gameActive = false;
+            processingDecision = true;
+
+            if(gameOverScoreDisplay) gameOverScoreDisplay.textContent = `Punteggio Finale: ${score}`;
+            if(gameOverReason) gameOverReason.textContent = reason;
+
+            switchScreen(gameOverScreen);
+            processingDecision = false;
+        }
+
+        function restartGame() {
+            debugLog("Restart Game button clicked.");
+            lives = STARTING_LIVES;
+            score = 0;
+            quotaMet = 0;
+            currentLevel = 1;
+            currentPartygoer = null;
+            currentRules = [];
+            ruleAssessments = {};
+            currentChallenge = null;
+            customDataImported = false;
+            isPaused = false;
+
+            resetTimer();
+            stopTypewriter();
+             clearTimeout(triggerHideTimeout);
+             clearTimeout(clipboardHideTimeout);
+             triggerHideTimeout = null;
+             clipboardHideTimeout = null;
+
+
+            debugLog("Game state reset.");
+            switchScreen(titleScreen);
+
+            if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = true;
+            if(importTextarea) importTextarea.value = '';
+            if(importFeedback) {
+                 importFeedback.textContent = '';
+                 importFeedback.className = '';
+            }
+            updateStartButtonState();
+        }
+
+        function pauseGame() {
+            if (isPaused || !gameplayScreen.classList.contains('active')) {
+                 debugLog("Pause ignored (already paused or not on gameplay screen).");
+                 return;
+            }
+            isPaused = true;
+            stopTimer();
+            debugLog("Game Paused.");
+
+            if(admitButton) admitButton.disabled = true;
+            if(rejectButton) rejectButton.disabled = true;
+            clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = true);
+            clipboard.classList.remove('active');
+            gameContainer.classList.remove('clipboard-active');
+
+             clearTimeout(triggerHideTimeout);
+             clearTimeout(clipboardHideTimeout);
+             triggerHideTimeout = null;
+             clipboardHideTimeout = null;
+
+
+            if(pauseOverlay) pauseOverlay.style.display = 'flex';
+            if(pauseButton) pauseButton.style.display = 'none';
+        }
+
+        function resumeGame() {
+            if (!isPaused || !gameplayScreen.classList.contains('active')) {
+                 debugLog("Resume ignored (not paused or not on gameplay screen).");
+                 return;
+            }
+            isPaused = false;
+            if (timerActive || timeLeft < TIMER_DURATION) {
+                 startTimer();
+            }
+            debugLog("Game Resumed.");
+
+            if (!processingDecision) {
+                 clipboardRulesList.querySelectorAll('.assess-btn').forEach(btn => btn.disabled = false);
+            }
+            checkAllRulesAssessed();
+
+            if(pauseOverlay) pauseOverlay.style.display = 'none';
+            if(pauseButton) pauseButton.style.display = 'inline-block';
+        }
+
+        function importSimpleData() {
+            const code = importTextarea.value;
+            if(importFeedback) {
+                importFeedback.textContent = '';
+                importFeedback.className = '';
+            }
+            debugLog("IMPORT: Button clicked.");
+
+            if (!code) {
+                if(importFeedback) {
+                    importFeedback.textContent = "Niente da importare. Incolla i dati nell'area di testo.";
+                    importFeedback.className = 'error';
+                }
+                debugLog("IMPORT: Aborted - No code provided.");
+                return;
+            }
+
+            let importedData = { rules: [], phrases: {}, partygoers: [], partygoerIDs: new Set(), practiceItems: [] };
+            let tempKnownTraits = new Set();
+            const lines = code.split('\n');
+            let rulesAdded = 0, phrasesAdded = 0, partygoersAdded = 0, practiceAdded = 0;
+            let errors = [];
+
+            lines.forEach((line, index) => {
+                line = line.trim();
+                if (!line || line.startsWith('#') || line.startsWith('//')) {
+                    return;
+                }
+
+                const parts = line.split('|').map(p => p.trim());
+                const type = parts[0]?.toUpperCase();
+                const data = parts.slice(1);
+                const lineNumber = index + 1;
+
+                try {
+                    if (type === 'RULE') {
+                        let rule = {};
+                        if (data.length < 3) throw new Error(`La regola necessita del formato: trait | TRUE/FALSE | testo [| exception_trait | TRUE/FALSE | override_text]`);
+                        rule.trait = data[0];
+                        if (!rule.trait) throw new Error("Il trait della regola non può essere vuoto.");
+                        if (data[1].toUpperCase() !== 'TRUE' && data[1].toUpperCase() !== 'FALSE') throw new Error(`La condizione della regola deve essere TRUE o FALSE, non '${data[1]}'.`);
+                        rule.condition = data[1].toUpperCase() === 'TRUE';
+                        rule.text = data[2];
+                        if (!rule.text) throw new Error("Il testo della regola non può essere vuoto.");
+                        tempKnownTraits.add(rule.trait);
+
+                        if (data.length >= 5) {
+                            rule.isDouble = true;
+                            const exception_trait = data[3];
+                            if (!exception_trait) throw new Error("Il trait dell'eccezione non può essere vuoto per una regola complessa.");
+                            const exception_condition_str = data[4].toUpperCase();
+                            if (exception_condition_str !== 'TRUE' && exception_condition_str !== 'FALSE') {
+                                throw new Error(`La condizione dell'eccezione deve essere TRUE o FALSE, non '${data[4]}'.`);
+                            }
+                            rule.exception = { trait: exception_trait, condition: exception_condition_str === 'TRUE' };
+                            tempKnownTraits.add(rule.exception.trait);
+                            if (data.length >= 6 && data[5]) rule.text_override = data[5];
+                        } else {
+                             rule.isDouble = false;
+                        }
+                        importedData.rules.push(rule);
+                        rulesAdded++;
+                    } else if (type === 'PHRASE') {
+                        if (data.length !== 3) throw new Error("La frase necessita del formato: trait | TRUE/FALSE | testo");
+                        const trait = data[0]; const stateStr = data[1].toUpperCase(); const text = data[2];
+                        if (!trait) throw new Error("Il trait della frase non può essere vuoto.");
+                        if (stateStr !== 'TRUE' && stateStr !== 'FALSE') throw new Error(`Lo stato della frase deve essere TRUE o FALSE, non '${data[1]}'.`);
+                        if (!text) throw new Error("Il testo della frase non può essere vuoto.");
+                        const stateKey = (stateStr === 'TRUE') ? 'true' : 'false';
+                        if (!importedData.phrases[trait]) importedData.phrases[trait] = { true: [], false: [] };
+                        importedData.phrases[trait][stateKey].push(text);
+                        phrasesAdded++;
+                        tempKnownTraits.add(trait);
+                    } else if (type === 'PARTYGOER') {
+                        if (data.length < 1 || !data[0]) throw new Error("L'ospite necessita del formato: id [| trait1=T/F | trait2=T/F ...]");
+                        const id = data[0];
+                        if (importedData.partygoerIDs.has(id)) throw new Error(`ID ospite duplicato: ${id}`);
+                        let newTraits = {};
+                        const traitPairs = data.slice(1);
+                        traitPairs.forEach(pair => {
+                            const kv = pair.split('=').map(p => p.trim());
+                            if (kv.length !== 2 || !kv[0]) throw new Error(`Formato trait invalido per l'ospite ${id}: "${pair}". Usa trait=T o trait=F.`);
+                            const traitName = kv[0]; const traitValueStr = kv[1].toUpperCase();
+                            if (traitValueStr !== 'T' && traitValueStr !== 'F') throw new Error(`Valore trait invalido per ${traitName} sull'ospite ${id}: "${kv[1]}". Usa T o F.`);
+                            newTraits[traitName] = (traitValueStr === 'T');
+                            tempKnownTraits.add(traitName);
+                        });
+                        importedData.partygoers.push({ id: id, traits: newTraits });
+                        importedData.partygoerIDs.add(id);
+                        partygoersAdded++;
+                    } else if (type === 'PRACTICE') {
+                        if (data.length < 3 || data.length > 5) throw new Error("L'esercitazione necessita del formato: tipo | domanda | risposta [| feedback_se_errore | related_trait]");
+                        const practiceType = data[0].toLowerCase(); const prompt = data[1]; const answer = data[2];
+                        const feedback = data[3] || null; const related_trait = data[4] || null;
+                        if (!practiceType || !prompt || !answer) throw new Error("Tipo, domanda e risposta dell'esercitazione sono richiesti.");
+                        importedData.practiceItems.push({ type: practiceType, prompt, answer, feedback_if_wrong: feedback, related_trait: related_trait });
+                        practiceAdded++;
+                    } else {
+                        throw new Error(`Tipo di riga sconosciuto: "${type}". Usa RULE, PHRASE, PARTYGOER, o PRACTICE.`);
+                    }
+                } catch (error) {
+                    errors.push(`Riga ${lineNumber}: ${error.message}`);
+                    debugLog(`IMPORT ERROR on line ${lineNumber}: ${line} - ${error.message}`);
+                }
+            });
+
+            if (errors.length === 0 && (rulesAdded > 0 && partygoersAdded > 0)) {
+                gameData = importedData;
+                allKnownTraitKeys = tempKnownTraits;
+
+                gameData.partygoers.forEach(pg => {
+                    allKnownTraitKeys.forEach(trait => {
+                        if (!(trait in pg.traits)) {
+                            pg.traits[trait] = false;
+                        }
+                    });
+                });
+
+                customDataImported = true;
+                currentGameMode = 'custom';
+                if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = false;
+                if(importFeedback) {
+                    importFeedback.textContent = `Importazione riuscita! Aggiunti: ${rulesAdded} Regole, ${phrasesAdded} Frasi, ${partygoersAdded} Ospiti, ${practiceAdded} Esercitazioni.`;
+                    importFeedback.className = 'success';
+                }
+                debugLog("Custom data successfully imported and applied.");
+                if (enableDebug) console.log("Loaded Custom Game Data:", JSON.stringify(gameData, null, 2));
+
+            } else {
+                customDataImported = false;
+                if (errors.length > 0) {
+                    const errorMsg = `Importazione fallita con ${errors.length} ${errors.length === 1 ? 'errore' : 'errori'}:\n- ${errors.slice(0, 3).join('\n- ')}${errors.length > 3 ? '\n(...e altri)' : ''}`;
+                    if(importFeedback) {
+                        importFeedback.textContent = errorMsg;
+                        importFeedback.className = 'error';
+                    }
+                    debugLog(`Import failed with errors: ${errors.join('; ')}`);
+                } else {
+                    if(importFeedback) {
+                        importFeedback.textContent = `Importazione fallita. Sono richieste righe RULE e PARTYGOER valide.`;
+                        importFeedback.className = 'error';
+                    }
+                    debugLog("Import finished, but no valid rules or partygoers were added.");
+                }
+                 loadDataSet(true);
+            }
+            updateStartButtonState();
+        }
+
+
+        function updateStartButtonState() {
+            if (!startGameButton || !useDefaultSetCheckbox) {
+                 debugLog("Error: Start button or checkbox not found during updateStartButtonState");
+                 return;
+            }
+            const useDefault = useDefaultSetCheckbox.checked;
+            const canStart = customDataImported || useDefault;
+            startGameButton.disabled = !canStart;
+
+            if (useDefault) {
+                 if (customDataImported) {
+                     customDataImported = false;
+                     loadDataSet(true);
+                     debugLog("Switched back to using default data set.");
+                 }
+                 if (importFeedback && (importFeedback.className === 'error' || importFeedback.className === 'success')) {
+                     importFeedback.textContent = '';
+                     importFeedback.className = '';
+                 }
+            }
+            else if (customDataImported) {
+                 useDefaultSetCheckbox.checked = false;
+            }
+        }
+
+        // --- Event Listeners ---
+        debugLog("Setting up event listeners.");
+
+        if (startGameButton) {
+            startGameButton.addEventListener('click', () => {
+                debugLog("Start Game button clicked.");
+                if (!gameData || !gameData.rules || gameData.rules.length === 0 || !gameData.partygoers || gameData.partygoers.length === 0) {
+                    if(importFeedback) {
+                        importFeedback.textContent = "Errore: Impossibile iniziare senza regole o ospiti validi nel set di dati attivo.";
+                        importFeedback.className = 'error';
+                    }
+                    debugLog("Start game aborted: Empty rules or partygoers in active dataset.");
+                    startGameButton.disabled = true;
+                } else {
+                    setupLevel(1);
+                }
+            });
+        } else debugLog("ERROR: startGameButton not found");
+
+        if (howToPlayButton) {
+            howToPlayButton.addEventListener('click', () => {
+                if(howToPlayOverlay) howToPlayOverlay.classList.add('active');
+            });
+        } else debugLog("ERROR: howToPlayButton not found");
+
+        if (closeHowToPlayButton) {
+            closeHowToPlayButton.addEventListener('click', () => {
+                if(howToPlayOverlay) howToPlayOverlay.classList.remove('active');
+            });
+        } else debugLog("ERROR: closeHowToPlayButton not found");
+
+        if (importDataButton) {
+            importDataButton.addEventListener('click', importSimpleData);
+        } else debugLog("ERROR: importDataButton not found");
+
+        if (useDefaultSetCheckbox) {
+            useDefaultSetCheckbox.addEventListener('change', updateStartButtonState);
+        } else debugLog("ERROR: use-default-set-checkbox not found");
+
+        if (startShiftButton) {
+            startShiftButton.addEventListener('click', startShift);
+        } else debugLog("ERROR: startShiftButton not found");
+
+        if (admitButton) {
+            admitButton.addEventListener('click', () => handleDecision(true));
+        } else debugLog("ERROR: clipboard-admit-button not found");
+
+        if (rejectButton) {
+            rejectButton.addEventListener('click', () => handleDecision(false));
+        } else debugLog("ERROR: clipboard-reject-button not found");
+
+        if (clipboardTrigger && clipboard && gameContainer) {
+            clipboardTrigger.addEventListener('mouseenter', () => {
+                if (gameplayScreen.classList.contains('active') && !isPaused) {
+                    clearTimeout(clipboardHideTimeout);
+                    clipboardHideTimeout = null;
+                    clipboard.classList.add('active');
+                    gameContainer.classList.add('clipboard-active');
+                }
+            });
+
+            clipboardTrigger.addEventListener('mouseleave', () => {
+                 if (!triggerHideTimeout) {
+                    triggerHideTimeout = setTimeout(() => {
+                        clipboard.classList.remove('active');
+                        gameContainer.classList.remove('clipboard-active');
+                        triggerHideTimeout = null;
+                    }, CLIPBOARD_HIDE_DELAY);
+                 }
+            });
+
+            clipboard.addEventListener('mouseenter', () => {
+                clearTimeout(triggerHideTimeout);
+                triggerHideTimeout = null;
+                 if (gameplayScreen.classList.contains('active') && !isPaused) {
+                     clipboard.classList.add('active');
+                     gameContainer.classList.add('clipboard-active');
+                 }
+            });
+
+            clipboard.addEventListener('mouseleave', () => {
+                 if (!clipboardHideTimeout) {
+                    clipboardHideTimeout = setTimeout(() => {
+                        clipboard.classList.remove('active');
+                        gameContainer.classList.remove('clipboard-active');
+                        clipboardHideTimeout = null;
+                    }, CLIPBOARD_HIDE_DELAY);
+                 }
+            });
+        } else {
+            debugLog("ERROR: clipboardTrigger or clipboard element not found for event listeners.");
+        }
+
+
+        if (pauseButton) {
+            pauseButton.addEventListener('click', pauseGame);
+        } else debugLog("ERROR: pause-button not found");
+
+        if (resumeButton) {
+            resumeButton.addEventListener('click', resumeGame);
+        } else debugLog("ERROR: resume-button not found");
+
+        if (reviewChallengeSubmitButton) {
+            reviewChallengeSubmitButton.addEventListener('click', handleReviewChallengeSubmit);
+        } else debugLog("ERROR: review-challenge-submit-button not found");
+
+        if (reviewChallengeInput) {
+            reviewChallengeInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter' && !reviewChallengeSubmitButton.disabled) {
+                    handleReviewChallengeSubmit();
+                }
+            });
+        } else debugLog("ERROR: review-challenge-input not found");
+
+        if (continueNextLevelButton) {
+            continueNextLevelButton.addEventListener('click', nextLevel);
+        } else debugLog("ERROR: continue-next-level-button not found");
+
+        if (restartButtonGameOver) {
+            restartButtonGameOver.addEventListener('click', restartGame);
+        } else debugLog("ERROR: restartButtonGameOver not found");
+
+        debugLog("Event listeners attached checks complete.");
+
+        // --- Game Initialization ---
+        debugLog("Starting game initialization.");
+        document.addEventListener('DOMContentLoaded', () => {
+             debugLog("DOM loaded. Initializing game state.");
+             loadDataSet(true);
+             customDataImported = false;
+             if(useDefaultSetCheckbox) useDefaultSetCheckbox.checked = true;
+             updateStartButtonState();
+             switchScreen(titleScreen);
+             debugLog("Initial setup complete. Showing Title Screen.");
+         });
+
+    </script>
+    </body>
+</html>
